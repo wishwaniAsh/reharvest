@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -59,11 +60,13 @@ class _LoginPageState extends State<LoginPage> {
                         labelStyle: GoogleFonts.montserrat(),
                         prefixIcon: const Icon(Icons.person),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFBFBF6E), width: 2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -82,11 +85,13 @@ class _LoginPageState extends State<LoginPage> {
                         labelStyle: GoogleFonts.montserrat(),
                         prefixIcon: const Icon(Icons.lock),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFBFBF6E), width: 2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -97,41 +102,60 @@ class _LoginPageState extends State<LoginPage> {
 
                     // Role Dropdown
                     DropdownButtonFormField<String>(
-                      value: selectedRole,
-                      decoration: InputDecoration(
-                        labelText: 'Select your role',
-                        labelStyle: GoogleFonts.montserrat(),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E)),
-                        ),
-                      ),
-                      style: GoogleFonts.montserrat(color: Colors.black),
-                      items: roles.map((role) {
-                        return DropdownMenuItem<String>(
-                          value: role,
-                          child: Text(role, style: GoogleFonts.montserrat()),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedRole = value;
-                        });
-                      },
-                      validator: (value) =>
-                          value == null ? 'Please select a role' : null,
-                    ),
+  value: selectedRole,
+  decoration: InputDecoration(
+    labelText: 'Select your role',
+    labelStyle: GoogleFonts.montserrat(),
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(8),
+      borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+    ),
+  ),
+  dropdownColor: const Color(0xFFFFF3DC), // Background of dropdown menu
+  style: GoogleFonts.montserrat(color: Colors.black),
+  icon: const Icon(Icons.arrow_drop_down),
+  borderRadius: BorderRadius.circular(8), // Dropdown menu corners
+  items: roles.map((role) {
+    return DropdownMenuItem<String>(
+      value: role,
+      child: Text(role, style: GoogleFonts.montserrat()),
+    );
+  }).toList(),
+  onChanged: (value) {
+    setState(() {
+      selectedRole = value;
+    });
+  },
+  validator: (value) =>
+      value == null ? 'Please select a role' : null,
+),
+
                     const SizedBox(height: 24),
 
                     // Login Button
                     ElevatedButton(
                       onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Logging in...')),
-                          );
-                        }
-                      },
+  if (_formKey.currentState!.validate()) {
+    // Simulated authentication
+    if (selectedRole == 'Admin') {
+      Navigator.pushNamed(context, '/admin_dashboard');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Logged in as $selectedRole (redirect not configured)',
+            style: GoogleFonts.montserrat(),
+          ),
+        ),
+      );
+    }
+  }
+},
+
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFBFBF6E),
                         minimumSize: const Size(double.infinity, 48),
@@ -169,14 +193,26 @@ class _LoginPageState extends State<LoginPage> {
                       style: GoogleFonts.montserrat(),
                     ),
                     const SizedBox(height: 8),
-                    const Row(
+
+                    // Social Login Icons
+                    Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.email, color: Colors.grey),
-                        SizedBox(width: 10),
-                        Icon(Icons.fingerprint, color: Colors.grey),
+                        IconButton(
+                          icon: const Icon(Icons.email, color: Colors.grey),
+                          onPressed: () {},
+                        ),
+                        IconButton(
+                          icon: const FaIcon(FontAwesomeIcons.facebook, color: Colors.blue),
+                          onPressed: () {},
+                        ),
+                        IconButton(
+                          icon: const FaIcon(FontAwesomeIcons.apple, color: Colors.black),
+                          onPressed: () {},
+                        ),
                       ],
                     ),
+
                     const SizedBox(height: 24),
 
                     // Register Now
@@ -195,6 +231,7 @@ class _LoginPageState extends State<LoginPage> {
                             'Register Now',
                             style: GoogleFonts.montserrat(
                               fontWeight: FontWeight.bold,
+                              color: Color(0xFFE10238),
                             ),
                           ),
                         )

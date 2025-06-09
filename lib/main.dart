@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:reharvest/pages/admin_dashboard.dart';
 import 'package:reharvest/pages/login_page.dart';
 import 'package:reharvest/pages/startpage.dart';
 // import 'login_page.dart'; // Placeholder – create this next
@@ -22,7 +23,8 @@ class MyApp extends StatelessWidget {
       initialRoute: '/',
       routes: {
         '/': (context) =>  StartPage(),
-        '/login': (context) => const LoginPage(), // You’ll create this next
+        '/login': (context) => const LoginPage(), 
+        '/admin_dashboard': (context) => const AdminDashboard(),
       },
     );
   }
