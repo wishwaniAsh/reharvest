@@ -1,7 +1,8 @@
+import 'package:ReHarvest/pages/admin_dashboard.dart';
+import 'package:ReHarvest/pages/forgotpassword.dart';
+import 'package:ReHarvest/pages/login_page.dart';
+import 'package:ReHarvest/pages/startpage.dart';
 import 'package:flutter/material.dart';
-import 'package:reharvest/pages/admin_dashboard.dart';
-import 'package:reharvest/pages/login_page.dart';
-import 'package:reharvest/pages/startpage.dart';
 // import 'login_page.dart'; // Placeholder – create this next
 
 void main() {
@@ -25,6 +26,8 @@ class MyApp extends StatelessWidget {
         '/': (context) =>  StartPage(),
         '/login': (context) => const LoginPage(), 
         '/admin_dashboard': (context) => const AdminDashboard(),
+        '/forgot_password': (context) => const ForgotPasswordPage(),
+
       },
     );
   }
