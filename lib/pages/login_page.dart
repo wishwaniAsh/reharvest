@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'top_curve_clipper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,6 +17,17 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
 
   final List<String> roles = ['Admin', 'Farm-holder', 'Farmer'];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final bool fromLogout = ModalRoute.of(context)?.settings.arguments == 'logout';
+    if (fromLogout) {
+      usernameController.clear();
+      passwordController.clear();
+      selectedRole = null;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +63,6 @@ class _LoginPageState extends State<LoginPage> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Username
                     TextFormField(
                       controller: usernameController,
                       style: GoogleFonts.montserrat(),
@@ -60,22 +71,18 @@ class _LoginPageState extends State<LoginPage> {
                         labelStyle: GoogleFonts.montserrat(),
                         prefixIcon: const Icon(Icons.person),
                         focusedBorder: OutlineInputBorder(
-                          borderSide:
-                              const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderSide:
-                              const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      validator: (value) =>
-                          value!.isEmpty ? 'Please enter your username' : null,
+                      validator: (value) => value!.isEmpty ? 'Please enter your username' : null,
                     ),
                     const SizedBox(height: 16),
 
-                    // Password
                     TextFormField(
                       controller: passwordController,
                       obscureText: true,
@@ -85,77 +92,68 @@ class _LoginPageState extends State<LoginPage> {
                         labelStyle: GoogleFonts.montserrat(),
                         prefixIcon: const Icon(Icons.lock),
                         focusedBorder: OutlineInputBorder(
-                          borderSide:
-                              const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderSide:
-                              const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      validator: (value) =>
-                          value!.isEmpty ? 'Please enter your password' : null,
+                      validator: (value) => value!.isEmpty ? 'Please enter your password' : null,
                     ),
                     const SizedBox(height: 16),
 
-                    // Role Dropdown
                     DropdownButtonFormField<String>(
-  value: selectedRole,
-  decoration: InputDecoration(
-    labelText: 'Select your role',
-    labelStyle: GoogleFonts.montserrat(),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
-    ),
-  ),
-  dropdownColor: const Color(0xFFFFF3DC), // Background of dropdown menu
-  style: GoogleFonts.montserrat(color: Colors.black),
-  icon: const Icon(Icons.arrow_drop_down),
-  borderRadius: BorderRadius.circular(8), // Dropdown menu corners
-  items: roles.map((role) {
-    return DropdownMenuItem<String>(
-      value: role,
-      child: Text(role, style: GoogleFonts.montserrat()),
-    );
-  }).toList(),
-  onChanged: (value) {
-    setState(() {
-      selectedRole = value;
-    });
-  },
-  validator: (value) =>
-      value == null ? 'Please select a role' : null,
-),
-
+                      value: selectedRole,
+                      decoration: InputDecoration(
+                        labelText: 'Select your role',
+                        labelStyle: GoogleFonts.montserrat(),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                        ),
+                      ),
+                      dropdownColor: const Color(0xFFFFF3DC),
+                      style: GoogleFonts.montserrat(color: Colors.black),
+                      icon: const Icon(Icons.arrow_drop_down),
+                      borderRadius: BorderRadius.circular(8),
+                      items: roles.map((role) {
+                        return DropdownMenuItem<String>(
+                          value: role,
+                          child: Text(role, style: GoogleFonts.montserrat()),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() {
+                          selectedRole = value;
+                        });
+                      },
+                      validator: (value) => value == null ? 'Please select a role' : null,
+                    ),
                     const SizedBox(height: 24),
 
-                    // Login Button
                     ElevatedButton(
                       onPressed: () {
-  if (_formKey.currentState!.validate()) {
-    // Simulated authentication
-    if (selectedRole == 'Admin') {
-      Navigator.pushNamed(context, '/admin_dashboard');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Logged in as $selectedRole (redirect not configured)',
-            style: GoogleFonts.montserrat(),
-          ),
-        ),
-      );
-    }
-  }
-},
-
+                        if (_formKey.currentState!.validate()) {
+                          if (selectedRole == 'Admin') {
+                            Navigator.pushNamed(context, '/admin_dashboard');
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Logged in as $selectedRole (redirect not configured)',
+                                  style: GoogleFonts.montserrat(),
+                                ),
+                              ),
+                            );
+                          }
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFBFBF6E),
                         minimumSize: const Size(double.infinity, 48),
@@ -171,31 +169,21 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Forgot Password
                     TextButton(
                       onPressed: () {
-    Navigator.pushNamed(context, '/forgot_password');
-
-  },
+                        Navigator.pushNamed(context, '/forgot_password');
+                      },
                       child: Text(
                         'Forgot Password?',
                         style: GoogleFonts.montserrat(
-                          color: Color(0xFFE10238),
+                          color: const Color(0xFFE10238),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
-
-                    // Or login with
-                    Text(
-                      'Or login with',
-                      style: GoogleFonts.montserrat(),
-                    ),
+                    Text('Or login with', style: GoogleFonts.montserrat()),
                     const SizedBox(height: 8),
-
-                    // Social Login Icons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -213,17 +201,11 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 24),
-
-                    // Register Now
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          "Don't have an account? ",
-                          style: GoogleFonts.montserrat(),
-                        ),
+                        Text("Don't have an account? ", style: GoogleFonts.montserrat()),
                         TextButton(
                           onPressed: () {
                             Navigator.pushNamed(context, '/signup');
@@ -232,7 +214,7 @@ class _LoginPageState extends State<LoginPage> {
                             'Register Now',
                             style: GoogleFonts.montserrat(
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFFE10238),
+                              color: const Color(0xFFE10238),
                             ),
                           ),
                         )
@@ -249,7 +231,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// Curved header
 class TopCurveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
