@@ -1,3 +1,4 @@
+import 'package:ReHarvest/pages/datareviewpage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'top_curve_clipper.dart';
@@ -146,12 +147,27 @@ class _UploadDataPageState extends State<UploadDataPage> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          if (_formKey.currentState!.validate()) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Data submitted successfully!')),
-                            );
-                          }
-                        },
+  if (_formKey.currentState!.validate() &&
+      selectedVegetable != null &&
+      selectedVegetable!.isNotEmpty) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ReviewPage(data: {
+          'truckId': truckIdController.text,
+          'vegetable': selectedVegetable!,
+          'quantity': quantityController.text,
+          'time': arrivalTimeController.text,
+        }),
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Please select a vegetable')),
+    );
+  }
+},
+
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFBFBF6E),
                           padding: const EdgeInsets.symmetric(vertical: 14),
