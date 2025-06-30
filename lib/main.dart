@@ -1,11 +1,11 @@
 import 'package:ReHarvest/pages/admin_dashboard.dart';
+import 'package:ReHarvest/pages/datapage.dart';
 import 'package:ReHarvest/pages/forgotpassword.dart';
 import 'package:ReHarvest/pages/login_page.dart';
 import 'package:ReHarvest/pages/signup.dart';
 import 'package:ReHarvest/pages/startpage.dart';
 import 'package:ReHarvest/pages/uploaddatapage.dart';
 import 'package:flutter/material.dart';
-// import 'login_page.dart'; // Placeholder – create this next
 
 void main() {
   runApp(const MyApp());
@@ -24,15 +24,38 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       initialRoute: '/',
-      routes: {
-        '/': (context) =>  StartPage(),
-        '/login': (context) => const LoginPage(), 
-        '/admin_dashboard': (context) => const AdminDashboard(),
-        '/forgot_password': (context) => const ForgotPasswordPage(),
-        '/signup': (context) => const SignUpPage(),
-        '/upload': (context) => const UploadDataPage(),
+      onGenerateRoute: (settings) {
+        if (settings.name == '/data_screen') {
+          final args = settings.arguments as List<Map<String, String>>?;
 
+          return MaterialPageRoute(
+            builder: (context) => DataPage(
+              allData: args ?? [], // pass empty list if no data provided
+            ),
+          );
+        }
 
+        // fallback to named routes
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(builder: (_) => const StartPage());
+          case '/login':
+            return MaterialPageRoute(builder: (_) => const LoginPage());
+          case '/admin_dashboard':
+            return MaterialPageRoute(builder: (_) => const AdminDashboard());
+          case '/forgot_password':
+            return MaterialPageRoute(builder: (_) => const ForgotPasswordPage());
+          case '/signup':
+            return MaterialPageRoute(builder: (_) => const SignUpPage());
+          case '/upload':
+            return MaterialPageRoute(builder: (_) => const UploadDataPage());
+          default:
+            return MaterialPageRoute(
+              builder: (_) => const Scaffold(
+                body: Center(child: Text('Page not found')),
+              ),
+            );
+        }
       },
     );
   }

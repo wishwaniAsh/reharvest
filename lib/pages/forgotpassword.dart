@@ -8,7 +8,7 @@ class ForgotPasswordPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final TextEditingController emailController = TextEditingController();
-    final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+    final GlobalKey<FormState> formKey = GlobalKey<FormState>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF3DC),
@@ -39,7 +39,7 @@ class ForgotPasswordPage extends StatelessWidget {
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
               child: Form(
-                key: _formKey,
+                key: formKey,
                 child: Column(
                   children: [
                     const Icon(Icons.lock, size: 150, color: Color(0xFFE65B1C)),
@@ -96,7 +96,7 @@ class ForgotPasswordPage extends StatelessWidget {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          if (_formKey.currentState!.validate()) {
+                          if (formKey.currentState!.validate()) {
                             // Email format is valid
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(

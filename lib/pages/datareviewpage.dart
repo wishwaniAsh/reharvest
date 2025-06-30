@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'top_curve_clipper.dart';
+import 'datapage.dart'; // Import your DataPage here
 
 class ReviewPage extends StatefulWidget {
   final Map<String, String> data;
@@ -35,26 +36,18 @@ class _ReviewPageState extends State<ReviewPage> {
   }
 
   Widget _buildEditableBox(TextEditingController controller) {
-    return Row(
-      children: [
-        Expanded(
-          child: TextFormField(
-            controller: controller,
-            style: GoogleFonts.montserrat(color: Colors.white),
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: const Color(0xFF4A3B2A),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
+    return TextFormField(
+      controller: controller,
+      style: GoogleFonts.montserrat(color: Colors.white),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: const Color(0xFF4A3B2A),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
         ),
-        const SizedBox(width: 8),
-        const Icon(Icons.edit, color: Colors.white)
-      ],
+      ),
     );
   }
 
@@ -64,6 +57,7 @@ class _ReviewPageState extends State<ReviewPage> {
       backgroundColor: const Color(0xFFFFF3DC),
       body: Stack(
         children: [
+          // Top header
           ClipPath(
             clipper: TopCurveClipper(),
             child: Container(
@@ -82,6 +76,8 @@ class _ReviewPageState extends State<ReviewPage> {
               ),
             ),
           ),
+
+          // Back button
           Positioned(
             top: 40,
             left: 10,
@@ -90,16 +86,17 @@ class _ReviewPageState extends State<ReviewPage> {
               onPressed: () => Navigator.pop(context),
             ),
           ),
+
+          // Main content
           Align(
             alignment: Alignment.center,
             child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(24, 180, 24, 24),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Image.asset(
                     'assets/images/reharvest_logo.png',
-                    height: 250,
+                    height: 200,
                   ),
                   const SizedBox(height: 16),
                   _buildEditableBox(truckIdController),
@@ -110,21 +107,28 @@ class _ReviewPageState extends State<ReviewPage> {
                   const SizedBox(height: 12),
                   _buildEditableBox(timeController),
                   const SizedBox(height: 24),
+
+                  // Confirm & Cancel buttons
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       ElevatedButton(
                         onPressed: () {
-                          // Save and go to data screen
-                          Navigator.pushNamed(
+                          // Navigate to DataPage with current data as a list
+                          Navigator.push(
                             context,
-                            '/data_screen',
-                            arguments: {
-                              'truckId': truckIdController.text,
-                              'vegetable': vegetableController.text,
-                              'quantity': quantityController.text,
-                              'time': timeController.text,
-                            },
+                            MaterialPageRoute(
+                              builder: (context) => DataPage(
+                                allData: [
+                                  {
+                                    'truckId': truckIdController.text,
+                                    'vegetable': vegetableController.text,
+                                    'quantity': quantityController.text,
+                                    'time': timeController.text,
+                                  },
+                                ],
+                              ),
+                            ),
                           );
                         },
                         style: ElevatedButton.styleFrom(
@@ -164,7 +168,7 @@ class _ReviewPageState extends State<ReviewPage> {
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
