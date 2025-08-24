@@ -83,7 +83,7 @@ class AdminDashboard extends StatelessWidget {
                     const SizedBox(height: 12),
                     _buildDashboardButton(context, 'Waste Management', '/waste'),
                     const SizedBox(height: 12),
-                    _buildDashboardButton(context, 'Logout', '/'),
+                    _buildDashboardButton(context, 'Logout', '/login'),
                   ],
                 ),
               ),
@@ -99,7 +99,7 @@ class AdminDashboard extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         onPressed: () {
-          if (route == '/') {
+          if (route == '/login') {
             Navigator.pushNamedAndRemoveUntil(
               context,
               '/login',

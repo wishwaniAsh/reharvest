@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "264763726470",
+    "project_id": "reharvest-14f7d",
+    "storage_bucket": "reharvest-14f7d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264763726470:android:215183bacb71151a56cf07",
+        "android_client_info": {
+          "package_name": "com.example.reharvest"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCc-U51Z5b79xGiXC2t94ygqIK6iWrHqYQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

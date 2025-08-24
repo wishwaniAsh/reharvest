@@ -14,11 +14,14 @@ class _UploadDataPageState extends State<UploadDataPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController truckIdController = TextEditingController();
   final TextEditingController quantityController = TextEditingController();
-  final TextEditingController arrivalTimeController = TextEditingController();
+
+  DateTime? selectedDate;
+  TimeOfDay? selectedTime;
+
   final List<String> vegetables = [
-    'Cucumber', 'Leeks', 'Pumpkin', 'Eggplant', 'Yardlong bean', 'Potato', 'Onion',
-    'Tomato', 'Cooking melons', 'Beetroot', 'Cabbage', 'Radish', 'Carrot', 'Green beans',
-    'Okra', 'Garlic'
+    'Cucumber', 'Leeks', 'Pumpkin', 'Eggplant', 'Yardlong bean', 'Potato',
+    'Onion', 'Tomato', 'Cooking melons', 'Beetroot', 'Cabbage', 'Radish',
+    'Carrot', 'Green beans', 'Okra', 'Garlic'
   ];
 
   String? selectedVegetable;
@@ -36,6 +39,43 @@ class _UploadDataPageState extends State<UploadDataPage> {
           .where((veg) => veg.toLowerCase().contains(query.toLowerCase()))
           .toList();
     });
+  }
+
+  Future<void> _pickDate() async {
+    DateTime now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedDate = picked;
+      });
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        selectedTime = picked;
+      });
+    }
+  }
+
+  String get formattedDate {
+    if (selectedDate == null) return "Select date";
+    return "${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}";
+  }
+
+  String get formattedTime {
+    if (selectedTime == null) return "Select time";
+    return "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}";
   }
 
   @override
@@ -86,10 +126,11 @@ class _UploadDataPageState extends State<UploadDataPage> {
                       height: 250,
                     ),
                     const SizedBox(height: 16),
+
                     _buildInputField(truckIdController, 'Truck ID'),
                     const SizedBox(height: 12),
 
-                    // Vegetable Dropdown
+                    // Vegetable Dropdown (Autocomplete)
                     Autocomplete<String>(
                       optionsBuilder: (TextEditingValue textEditingValue) {
                         if (textEditingValue.text.isEmpty) {
@@ -124,7 +165,8 @@ class _UploadDataPageState extends State<UploadDataPage> {
                             padding: EdgeInsets.zero,
                             shrinkWrap: true,
                             itemCount: options.length,
-                            separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFBFBF6E)),
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1, color: Color(0xFFBFBF6E)),
                             itemBuilder: (context, index) {
                               final String option = options.elementAt(index);
                               return ListTile(
@@ -140,34 +182,67 @@ class _UploadDataPageState extends State<UploadDataPage> {
                     const SizedBox(height: 12),
                     _buildInputField(quantityController, 'Quantity'),
                     const SizedBox(height: 12),
-                    _buildInputField(arrivalTimeController, 'Arrival time'),
+
+                    // Arrival Date
+                    GestureDetector(
+                      onTap: _pickDate,
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          decoration: _inputDecoration("Arrival Date").copyWith(
+                            suffixIcon: const Icon(Icons.calendar_today, color: Colors.white),
+                          ),
+                          controller: TextEditingController(text: formattedDate),
+                          style: GoogleFonts.montserrat(color: Colors.white),
+                          validator: (_) =>
+                              selectedDate == null ? "Please select arrival date" : null,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Arrival Time
+                    GestureDetector(
+                      onTap: _pickTime,
+                      child: AbsorbPointer(
+                        child: TextFormField(
+                          decoration: _inputDecoration("Arrival Time").copyWith(
+                            suffixIcon: const Icon(Icons.access_time, color: Colors.white),
+                          ),
+                          controller: TextEditingController(text: formattedTime),
+                          style: GoogleFonts.montserrat(color: Colors.white),
+                          validator: (_) =>
+                              selectedTime == null ? "Please select arrival time" : null,
+                        ),
+                      ),
+                    ),
+
                     const SizedBox(height: 20),
 
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-  if (_formKey.currentState!.validate() &&
-      selectedVegetable != null &&
-      selectedVegetable!.isNotEmpty) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ReviewPage(data: {
-          'truckId': truckIdController.text,
-          'vegetable': selectedVegetable!,
-          'quantity': quantityController.text,
-          'time': arrivalTimeController.text,
-        }),
-      ),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please select a vegetable')),
-    );
-  }
-},
-
+                          if (_formKey.currentState!.validate() &&
+                              selectedVegetable != null &&
+                              selectedVegetable!.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => ReviewPage(data: {
+                                  'truckId': truckIdController.text,
+                                  'vegetable': selectedVegetable!,
+                                  'quantity': quantityController.text,
+                                  'date': formattedDate,
+                                  'time': formattedTime,
+                                }),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please select a vegetable')),
+                            );
+                          }
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFBFBF6E),
                           padding: const EdgeInsets.symmetric(vertical: 14),

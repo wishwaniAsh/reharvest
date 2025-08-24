@@ -57,7 +57,7 @@ class DataPage extends StatelessWidget {
                   const SizedBox(height: 16),
                   ...allData.map((entry) {
                     final truckId = entry['truckId'] ?? 'N/A';
-                    final time = entry['time'] ?? 'N/A';
+                    final dateTime = entry['dateTime'] ?? 'N/A'; // date + time
                     final vegetable = entry['vegetable'] ?? 'N/A';
                     final quantity = entry['quantity'] ?? 'N/A';
 
@@ -79,7 +79,7 @@ class DataPage extends StatelessWidget {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          'Truck ID $truckId arrives at $time with $vegetable $quantity kg.',
+                          'Truck ID $truckId arrives at $dateTime with $vegetable $quantity kg.',
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontSize: 16,

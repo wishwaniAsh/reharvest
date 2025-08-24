@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'top_curve_clipper.dart';
+import 'prediction_screen.dart';
 
 class DetailPage extends StatelessWidget {
   final Map<String, String> data;
@@ -11,7 +12,7 @@ class DetailPage extends StatelessWidget {
     final truckId = data['truckId'] ?? 'N/A';
     final vegetable = data['vegetable'] ?? 'N/A';
     final quantity = data['quantity'] ?? 'N/A';
-    final time = data['time'] ?? 'N/A';
+    final dateTime = data['dateTime'] ?? 'N/A'; // now includes date + time
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF3DC),
@@ -66,7 +67,7 @@ class DetailPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      'Truck ID $truckId arrives at $time with $vegetable $quantity kg.',
+                      'Truck ID $truckId arrives at $dateTime with $vegetable $quantity kg.',
                       style: GoogleFonts.montserrat(
                         color: Colors.white,
                         fontSize: 16,
@@ -77,11 +78,18 @@ class DetailPage extends StatelessWidget {
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: () {
-                      // TODO: Navigate to waste prediction page
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              PredictionScreen(initialData: data),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFBFBF6E),
-                      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 40, vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'top_curve_clipper.dart';
-import 'datapage.dart'; // Import your DataPage here
+import 'datapage.dart';
 
 class ReviewPage extends StatefulWidget {
   final Map<String, String> data;
@@ -15,7 +15,7 @@ class _ReviewPageState extends State<ReviewPage> {
   late TextEditingController truckIdController;
   late TextEditingController vegetableController;
   late TextEditingController quantityController;
-  late TextEditingController timeController;
+  late TextEditingController dateTimeController;
 
   @override
   void initState() {
@@ -23,7 +23,17 @@ class _ReviewPageState extends State<ReviewPage> {
     truckIdController = TextEditingController(text: widget.data['truckId']);
     vegetableController = TextEditingController(text: widget.data['vegetable']);
     quantityController = TextEditingController(text: widget.data['quantity']);
-    timeController = TextEditingController(text: widget.data['time']);
+
+    // Combine date and time safely
+    final date = widget.data['date'] ?? '';
+    final time = widget.data['time'] ?? '';
+    final dateTimeText = (date.isNotEmpty && time.isNotEmpty)
+        ? "$date $time"
+        : date.isNotEmpty
+            ? date
+            : time;
+
+    dateTimeController = TextEditingController(text: dateTimeText);
   }
 
   @override
@@ -31,7 +41,7 @@ class _ReviewPageState extends State<ReviewPage> {
     truckIdController.dispose();
     vegetableController.dispose();
     quantityController.dispose();
-    timeController.dispose();
+    dateTimeController.dispose();
     super.dispose();
   }
 
@@ -105,7 +115,7 @@ class _ReviewPageState extends State<ReviewPage> {
                   const SizedBox(height: 12),
                   _buildEditableBox(quantityController),
                   const SizedBox(height: 12),
-                  _buildEditableBox(timeController),
+                  _buildEditableBox(dateTimeController),
                   const SizedBox(height: 24),
 
                   // Confirm & Cancel buttons
@@ -114,7 +124,6 @@ class _ReviewPageState extends State<ReviewPage> {
                     children: [
                       ElevatedButton(
                         onPressed: () {
-                          // Navigate to DataPage with current data as a list
                           Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -124,7 +133,7 @@ class _ReviewPageState extends State<ReviewPage> {
                                     'truckId': truckIdController.text,
                                     'vegetable': vegetableController.text,
                                     'quantity': quantityController.text,
-                                    'time': timeController.text,
+                                    'dateTime': dateTimeController.text,
                                   },
                                 ],
                               ),
@@ -133,7 +142,8 @@ class _ReviewPageState extends State<ReviewPage> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFBFBF6E),
-                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 30, vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -150,7 +160,8 @@ class _ReviewPageState extends State<ReviewPage> {
                         onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFBFBF6E),
-                          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 30, vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
