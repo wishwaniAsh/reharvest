@@ -7,7 +7,8 @@ import 'top_curve_clipper.dart';
 class PredictionScreen extends StatefulWidget {
   final Map<String, String>? initialData; // ✅ optional data from DetailPage
 
-  const PredictionScreen({super.key, this.initialData});
+     const PredictionScreen({super.key, this.initialData});
+
 
   @override
   State<PredictionScreen> createState() => _PredictionScreenState();
@@ -55,7 +56,7 @@ class _PredictionScreenState extends State<PredictionScreen> {
   final TextEditingController _quantityController = TextEditingController();
 
   double? _predictedWaste;
-  List<Map<String, dynamic>> _trendData = [];
+  final List<Map<String, dynamic>> _trendData = [];
 
   @override
   void initState() {
@@ -87,7 +88,9 @@ class _PredictionScreenState extends State<PredictionScreen> {
   Future<void> _predictWaste() async {
     if (_selectedVegetable == null ||
         _selectedMonth == null ||
-        _quantityController.text.isEmpty) return;
+        _quantityController.text.isEmpty) {
+      return;
+    }
 
     try {
       double prediction = await _service.getPrediction(

@@ -59,32 +59,32 @@ class AdminDashboard extends StatelessWidget {
               ),
             ),
 
-            // Main content
-            Align(
-              alignment: Alignment.center,
+            // Main content (scrollable)
+            SafeArea(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 160, 24, 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Logo
-                    Image.asset(
-                      'assets/images/reharvest_logo.png',
-                      height: 250,
-                    ),
-                    const SizedBox(height: 12),
-                    const SizedBox(height: 30),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Logo
+                      Image.asset(
+                        'assets/images/reharvest_logo.png',
+                        height: 220,
+                      ),
+                      const SizedBox(height: 30),
 
-                    _buildDashboardButton(context, 'Upload Data', '/upload'),
-                    const SizedBox(height: 12),
-                    _buildDashboardButton(context, 'View Data', '/view_data'),
-                    const SizedBox(height: 12),
-                    _buildDashboardButton(context, 'View Predictions', '/predictions'),
-                    const SizedBox(height: 12),
-                    _buildDashboardButton(context, 'Waste Management', '/waste'),
-                    const SizedBox(height: 12),
-                    _buildDashboardButton(context, 'Logout', '/login'),
-                  ],
+                      _buildDashboardButton(context, 'Upload Data', '/upload'),
+                      const SizedBox(height: 12),
+                      _buildDashboardButton(context, 'View Data', '/view_data'),
+                      const SizedBox(height: 12),
+                      _buildDashboardButton(context, 'View Predictions', '/predictions'),
+                      const SizedBox(height: 12),
+                      _buildDashboardButton(context, 'Waste Management', '/waste'),
+                      const SizedBox(height: 12),
+                      _buildDashboardButton(context, 'Logout', '/login'),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
                 ),
               ),
             ),

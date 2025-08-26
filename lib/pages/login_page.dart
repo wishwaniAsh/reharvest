@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'top_curve_clipper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -26,6 +29,17 @@ class _LoginPageState extends State<LoginPage> {
       passwordController.clear();
       selectedRole = null;
     }
+  }
+
+  // Load saved data from SharedPreferences
+  Future<List<Map<String, String>>> loadSavedData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedData = prefs.getString('allData');
+    if (savedData != null) {
+      final List<dynamic> decoded = jsonDecode(savedData);
+      return decoded.map((e) => Map<String, String>.from(e)).toList();
+    }
+    return [];
   }
 
   @override
@@ -62,6 +76,7 @@ class _LoginPageState extends State<LoginPage> {
                 key: _formKey,
                 child: Column(
                   children: [
+                    // Username Field
                     TextFormField(
                       controller: usernameController,
                       style: GoogleFonts.montserrat(),
@@ -82,6 +97,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
 
+                    // Password Field
                     TextFormField(
                       controller: passwordController,
                       obscureText: true,
@@ -103,6 +119,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
 
+                    // Role Dropdown
                     DropdownButtonFormField<String>(
                       value: selectedRole,
                       decoration: InputDecoration(
@@ -136,11 +153,20 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 24),
 
+                    // Login Button
                     ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         if (_formKey.currentState!.validate()) {
                           if (selectedRole == 'Admin') {
-                            Navigator.pushNamed(context, '/admin_dashboard');
+                            // Load saved data from SharedPreferences
+                            final allData = await loadSavedData();
+
+                            // Navigate to admin dashboard (DataPage) and pass data
+                            Navigator.pushNamed(
+                              context,
+                              '/admin_dashboard',
+                              arguments: allData,
+                            );
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -166,8 +192,10 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 12),
 
+                    // Forgot Password
                     TextButton(
                       onPressed: () {
                         Navigator.pushNamed(context, '/forgot_password');
@@ -180,6 +208,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 16),
                     Text('Or login with', style: GoogleFonts.montserrat()),
                     const SizedBox(height: 8),
@@ -201,6 +230,8 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                     const SizedBox(height: 24),
+
+                    // Register Option
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [

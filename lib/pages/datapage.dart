@@ -1,7 +1,9 @@
+import 'package:ReHarvest/pages/prediction_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'top_curve_clipper.dart';
-import 'detailpage.dart'; // Import your detail page
+import 'detailpage.dart';
+import 'viewdatapage.dart';
 
 class DataPage extends StatelessWidget {
   final List<Map<String, String>> allData;
@@ -43,7 +45,7 @@ class DataPage extends StatelessWidget {
             ),
           ),
 
-          // List of messages
+          // Main content
           Align(
             alignment: Alignment.center,
             child: SingleChildScrollView(
@@ -55,9 +57,11 @@ class DataPage extends StatelessWidget {
                     height: 200,
                   ),
                   const SizedBox(height: 16),
+
+                  // List of data entries
                   ...allData.map((entry) {
                     final truckId = entry['truckId'] ?? 'N/A';
-                    final dateTime = entry['dateTime'] ?? 'N/A'; // date + time
+                    final dateTime = entry['dateTime'] ?? 'N/A';
                     final vegetable = entry['vegetable'] ?? 'N/A';
                     final quantity = entry['quantity'] ?? 'N/A';
 
@@ -87,7 +91,74 @@ class DataPage extends StatelessWidget {
                         ),
                       ),
                     );
-                  }).toList(),
+                  }),
+
+                  const SizedBox(height: 24),
+
+                  // Row with two buttons side by side
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ViewDataPage(allData: allData),
+                              ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF4A3B2A),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'View Data',
+                            style: GoogleFonts.montserrat(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () {
+                            if (allData.isNotEmpty) {
+                              // ✅ Pass the LAST data entry to PredictionScreen
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => PredictionScreen(
+                                    initialData: allData.last,
+                                  ),
+                                ),
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFBFBF6E),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: Text(
+                            'Waste Prediction',
+                            style: GoogleFonts.montserrat(
+                              color: Colors.black,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),

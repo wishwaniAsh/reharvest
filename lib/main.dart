@@ -6,9 +6,8 @@ import 'package:ReHarvest/pages/prediction_screen.dart';
 import 'package:ReHarvest/pages/signup.dart';
 import 'package:ReHarvest/pages/startpage.dart';
 import 'package:ReHarvest/pages/uploaddatapage.dart';
+import 'package:ReHarvest/pages/viewdatapage.dart';
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
 
 void main() {
   runApp(const MyApp());
@@ -52,8 +51,10 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const SignUpPage());
           case '/upload':
             return MaterialPageRoute(builder: (_) => const UploadDataPage());
-            case '/predictions':    // <---- Add this line
-            return MaterialPageRoute(builder: (_) => const PredictionScreen(initialData: {},));
+          case '/view_data':
+            return MaterialPageRoute(builder: (_) => const ViewDataPage(allData: [],));
+          case '/predictions':    // <---- Add this line
+         return MaterialPageRoute(builder: (_) => const PredictionScreen(initialData: {},));
           default:
             return MaterialPageRoute(
               builder: (_) => const Scaffold(
