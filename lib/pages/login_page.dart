@@ -27,8 +27,8 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final bool fromLogout = ModalRoute.of(context)?.settings.arguments == 'logout';
-    if (fromLogout) {
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args != null && args == 'logout') {
       emailController.clear();
       passwordController.clear();
       selectedRole = null;
@@ -78,11 +78,13 @@ class _LoginPageState extends State<LoginPage> {
                         labelStyle: GoogleFonts.montserrat(),
                         prefixIcon: const Icon(Icons.email),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFBFBF6E), width: 2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -109,11 +111,13 @@ class _LoginPageState extends State<LoginPage> {
                         labelStyle: GoogleFonts.montserrat(),
                         prefixIcon: const Icon(Icons.lock),
                         focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFBFBF6E), width: 2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -123,41 +127,47 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Role Dropdown (now required)
-                    DropdownButtonFormField<String>(
-                      value: selectedRole,
-                      decoration: InputDecoration(
-                        labelText: 'Select your role',
-                        labelStyle: GoogleFonts.montserrat(),
-                        enabledBorder: OutlineInputBorder(
+                    // Role Dropdown
+                    StatefulBuilder(
+                      builder: (context, setInnerState) {
+                        return DropdownButtonFormField<String>(
+                          value: selectedRole,
+                          decoration: InputDecoration(
+                            labelText: 'Select your role',
+                            labelStyle: GoogleFonts.montserrat(),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(
+                                  color: Color(0xFFBFBF6E), width: 1.5),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide:
+                                  const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                            ),
+                          ),
+                          dropdownColor: const Color(0xFFFFF3DC),
+                          style: GoogleFonts.montserrat(color: Colors.black),
+                          icon: const Icon(Icons.arrow_drop_down),
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
-                        ),
-                      ),
-                      dropdownColor: const Color(0xFFFFF3DC),
-                      style: GoogleFonts.montserrat(color: Colors.black),
-                      icon: const Icon(Icons.arrow_drop_down),
-                      borderRadius: BorderRadius.circular(8),
-                      items: roles.map((role) {
-                        return DropdownMenuItem<String>(
-                          value: role,
-                          child: Text(role, style: GoogleFonts.montserrat()),
+                          items: roles.map((role) {
+                            return DropdownMenuItem<String>(
+                              value: role,
+                              child: Text(role, style: GoogleFonts.montserrat()),
+                            );
+                          }).toList(),
+                          onChanged: (value) {
+                            setInnerState(() {
+                              selectedRole = value;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please select your role';
+                            }
+                            return null;
+                          },
                         );
-                      }).toList(),
-                      onChanged: (value) {
-                        setState(() {
-                          selectedRole = value;
-                        });
-                      },
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please select your role';
-                        }
-                        return null;
                       },
                     ),
                     const SizedBox(height: 24),
@@ -254,8 +264,6 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _isLoading = true);
 
       try {
-        print('Attempting to login: ${emailController.text.trim()}');
-
         // Authenticate with Firebase
         User? user = await _authService.loginWithEmailAndPassword(
           emailController.text.trim(),
@@ -263,26 +271,14 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         if (user != null) {
-          print('User authenticated: ${user.uid}');
+          // Get role from database
+          Map<String, dynamic>? userData = await _authService.getUserData(user.uid);
+          String? userRole = userData?['role'] as String?;
 
-          // Get user data from Firebase
-          Map<String, dynamic>? userData;
-          String? userRole;
-
-          try {
-            userData = await _authService.getUserData(user.uid);
-            userRole = userData?['role'] as String?;
-            print('User role from database: $userRole');
-          } catch (e) {
-            print('Error fetching user data: $e');
-          }
-
-          // Use selected role as fallback if database role is null
           final effectiveRole = userRole ?? selectedRole;
-
           if (effectiveRole == null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Role information not found. Please contact support.')),
+              const SnackBar(content: Text('Role information not found.')),
             );
             setState(() => _isLoading = false);
             return;
@@ -292,50 +288,24 @@ class _LoginPageState extends State<LoginPage> {
             const SnackBar(content: Text('Logged in successfully!')),
           );
 
-          // Navigate based on role
           _navigateBasedOnRole(effectiveRole);
         }
       } on FirebaseAuthException catch (e) {
         String errorMessage = 'Login failed';
-
-        if (e.code == 'user-not-found') {
-          errorMessage = 'No user found with this email';
-        } else if (e.code == 'wrong-password') {
-          errorMessage = 'Incorrect password';
-        } else if (e.code == 'invalid-email') {
-          errorMessage = 'Invalid email address';
-        }
+        if (e.code == 'user-not-found') errorMessage = 'No user found';
+        else if (e.code == 'wrong-password') errorMessage = 'Incorrect password';
+        else if (e.code == 'invalid-email') errorMessage = 'Invalid email';
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(errorMessage)),
         );
-      } catch (e) {
-        // Handle special error gracefully
-        if (e.toString().contains('PigeonUserDetails')) {
-          final currentUser = _authService.getCurrentUser();
-          if (currentUser != null && selectedRole != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Login successful!')),
-            );
-
-            _navigateBasedOnRole(selectedRole!);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Login failed. Please try again.')),
-            );
-          }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Login error: ${e.toString()}')),
-          );
-        }
       } finally {
         setState(() => _isLoading = false);
       }
     }
   }
 
-  // Helper method to navigate based on role
+  // Navigate based on role
   void _navigateBasedOnRole(String role) {
     switch (role) {
       case 'Admin':
@@ -365,18 +335,6 @@ class _LoginPageState extends State<LoginPage> {
           '/user_dashboard',
           (route) => false,
         );
-        break;
     }
-  }
-
-  // Load saved data
-  Future<List<Map<String, String>>> loadSavedData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedData = prefs.getString('allData');
-    if (savedData != null) {
-      final List<dynamic> decoded = jsonDecode(savedData);
-      return decoded.map((e) => Map<String, String>.from(e)).toList();
-    }
-    return [];
   }
 }
