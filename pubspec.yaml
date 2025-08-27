@@ -4,33 +4,35 @@ publish_to: 'none'
 version: 0.1.0
 
 environment:
-  sdk: ^3.8.1
+  sdk: '>=3.8.1 <4.0.0'  # Fixed the SDK constraint
 
 dependencies:
   flutter:
     sdk: flutter
   google_fonts: ^6.1.0
   font_awesome_flutter: ^10.7.0
-  
   shared_preferences: ^2.1.1
   firebase_core: ^2.25.0
   firebase_auth: ^4.9.0
   firebase_storage: ^11.5.0
   cloud_firestore: ^4.15.9
+  http: ^1.4.0           
+  fl_chart: ^0.68.0      
+  intl: ^0.19.0   
+  firebase_database: ^10.0.11       
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^5.0.0
-  flutter_launcher_icons: ^0.13.1 
-  http: ^1.4.0
-  fl_chart: ^0.68.0
-  intl: ^0.19.0
+  flutter_launcher_icons: ^0.13.1
+
 flutter:
   uses-material-design: true
   assets:
-    - assets/images/reharvest_logo.png # ✅ Your icon/logo used here
+    - assets/images/reharvest_logo.png
 
-flutter_launcher_icons: # ✅ This section configures the icon
+flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/reharvest_logo.png"

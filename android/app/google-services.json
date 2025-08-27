@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "264763726470",
-    "project_id": "reharvest-14f7d",
-    "storage_bucket": "reharvest-14f7d.firebasestorage.app"
+    "project_number": "518240721279",
+    "project_id": "reharvest-efbda",
+    "storage_bucket": "reharvest-efbda.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:264763726470:android:215183bacb71151a56cf07",
+        "mobilesdk_app_id": "1:518240721279:android:d4eb55f929f8f7e89f224a",
         "android_client_info": {
           "package_name": "com.example.reharvest"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCc-U51Z5b79xGiXC2t94ygqIK6iWrHqYQ"
+          "current_key": "AIzaSyCJGXnEGOBCkh8ZGUt_PVnmIGab3vgXKAw"
         }
       ],
       "services": {

@@ -1,8 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import '../services/auth_service.dart'; // Import auth service
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -13,31 +16,22 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   String? selectedRole;
-  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController(); // Changed from usernameController
   final TextEditingController passwordController = TextEditingController();
+  bool _isLoading = false;
 
   final List<String> roles = ['Admin', 'Farm-holder', 'Farmer'];
+  final AuthService _authService = AuthService();
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     final bool fromLogout = ModalRoute.of(context)?.settings.arguments == 'logout';
     if (fromLogout) {
-      usernameController.clear();
+      emailController.clear();
       passwordController.clear();
       selectedRole = null;
     }
-  }
-
-  // Load saved data from SharedPreferences
-  Future<List<Map<String, String>>> loadSavedData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final savedData = prefs.getString('allData');
-    if (savedData != null) {
-      final List<dynamic> decoded = jsonDecode(savedData);
-      return decoded.map((e) => Map<String, String>.from(e)).toList();
-    }
-    return [];
   }
 
   @override
@@ -74,14 +68,14 @@ class _LoginPageState extends State<LoginPage> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Username Field
+                    // Email Field (changed from username)
                     TextFormField(
-                      controller: usernameController,
+                      controller: emailController,
                       style: GoogleFonts.montserrat(),
                       decoration: InputDecoration(
-                        labelText: 'User name',
+                        labelText: 'Email',
                         labelStyle: GoogleFonts.montserrat(),
-                        prefixIcon: const Icon(Icons.person),
+                        prefixIcon: const Icon(Icons.email),
                         focusedBorder: OutlineInputBorder(
                           borderSide: const BorderSide(color: Color(0xFFBFBF6E), width: 2),
                           borderRadius: BorderRadius.circular(8),
@@ -91,7 +85,16 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      validator: (value) => value!.isEmpty ? 'Please enter your username' : null,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                        if (!emailRegex.hasMatch(value)) {
+                          return 'Enter a valid email address';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
 
@@ -113,15 +116,17 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      validator: (value) => value!.isEmpty ? 'Please enter your password' : null,
+                      validator: (value) => value == null || value.isEmpty 
+                          ? 'Please enter your password' 
+                          : null,
                     ),
                     const SizedBox(height: 16),
 
-                    // Role Dropdown
+                    // Role Dropdown (optional now, since we'll get role from Firebase)
                     DropdownButtonFormField<String>(
                       value: selectedRole,
                       decoration: InputDecoration(
-                        labelText: 'Select your role',
+                        labelText: 'Select your role (Optional)',
                         labelStyle: GoogleFonts.montserrat(),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -147,48 +152,26 @@ class _LoginPageState extends State<LoginPage> {
                           selectedRole = value;
                         });
                       },
-                      validator: (value) => value == null ? 'Please select a role' : null,
                     ),
                     const SizedBox(height: 24),
 
                     // Login Button
                     ElevatedButton(
-                      onPressed: () async {
-                        if (_formKey.currentState!.validate()) {
-                          if (selectedRole == 'Admin') {
-                            // Load saved data from SharedPreferences
-                            final allData = await loadSavedData();
-
-                            // Navigate to admin dashboard (DataPage) and pass data
-                            Navigator.pushNamed(
-                              context,
-                              '/admin_dashboard',
-                              arguments: allData,
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Logged in as $selectedRole (redirect not configured)',
-                                  style: GoogleFonts.montserrat(),
-                                ),
-                              ),
-                            );
-                          }
-                        }
-                      },
+                      onPressed: _isLoading ? null : _loginUser,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFBFBF6E),
                         minimumSize: const Size(double.infinity, 48),
                       ),
-                      child: Text(
-                        'Login',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 18,
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.black)
+                          : Text(
+                              'Login',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 18,
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
 
                     const SizedBox(height: 12),
@@ -256,6 +239,133 @@ class _LoginPageState extends State<LoginPage> {
         ],
       ),
     );
+  }
+
+  // Login function
+  void _loginUser() async {
+  if (_formKey.currentState!.validate()) {
+    setState(() => _isLoading = true);
+
+    try {
+      print('Attempting to login: ${emailController.text.trim()}');
+      
+      // Authenticate with Firebase
+      User? user = await _authService.loginWithEmailAndPassword(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+      );
+
+      if (user != null) {
+        print('User authenticated: ${user.uid}');
+        
+        // Get user data from Firebase - with error handling
+        Map<String, dynamic>? userData;
+        String? userRole;
+        
+        try {
+          userData = await _authService.getUserData(user.uid);
+          userRole = userData?['role'] as String?;
+          print('User role from database: $userRole');
+        } catch (e) {
+          print('Error fetching user data: $e');
+          // Continue even if user data fetch fails
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Logged in successfully!'),
+          ),
+        );
+
+        // Navigate based on user role or dropdown selection
+        final effectiveRole = userRole ?? selectedRole;
+        print('Effective role: $effectiveRole');
+        
+        if (effectiveRole == 'Admin') {
+          print('Navigating to admin dashboard');
+          final allData = await loadSavedData();
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/admin_dashboard',
+            arguments: allData,
+            (route) => false,
+          );
+        } else {
+          print('Navigating to user dashboard');
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/user_dashboard',
+            (route) => false,
+          );
+        }
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Login failed';
+      
+      if (e.code == 'user-not-found') {
+        errorMessage = 'No user found with this email';
+      } else if (e.code == 'wrong-password') {
+        errorMessage = 'Incorrect password';
+      } else if (e.code == 'invalid-email') {
+        errorMessage = 'Invalid email address';
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    } catch (e) {
+      // Handle the PigeonUserDetails error gracefully
+      if (e.toString().contains('PigeonUserDetails')) {
+        print('PigeonUserDetails error handled gracefully');
+        
+        // Check if user is actually logged in despite the error
+        final currentUser = _authService.getCurrentUser();
+        if (currentUser != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login successful!')),
+          );
+          
+          // Navigate based on dropdown selection since we can't get user data
+          if (selectedRole == 'Admin') {
+            final allData = await loadSavedData();
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/admin_dashboard',
+              arguments: allData,
+              (route) => false,
+            );
+          } else {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/user_dashboard',
+              (route) => false,
+            );
+          }
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Login failed. Please try again.')),
+          );
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login error: ${e.toString()}')),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+}
+
+  // Keep your existing loadSavedData method
+  Future<List<Map<String, String>>> loadSavedData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedData = prefs.getString('allData');
+    if (savedData != null) {
+      final List<dynamic> decoded = jsonDecode(savedData);
+      return decoded.map((e) => Map<String, String>.from(e)).toList();
+    }
+    return [];
   }
 }
 

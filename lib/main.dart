@@ -7,10 +7,64 @@ import 'package:ReHarvest/pages/signup.dart';
 import 'package:ReHarvest/pages/startpage.dart';
 import 'package:ReHarvest/pages/uploaddatapage.dart';
 import 'package:ReHarvest/pages/viewdatapage.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:ReHarvest/firebase_options.dart';
 
-void main() {
+void main() async {
+  // Ensure Flutter is initialized
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  await _initializeFirebase();
+  
   runApp(const MyApp());
+}
+
+Future<void> _initializeFirebase() async {
+  try {
+    // Try to access the default app - if it throws, we need to initialize
+    try {
+      final app = Firebase.app();
+      if (kDebugMode) {
+        print('Firebase app already exists: ${app.name}');
+      }
+      return;
+    } on FirebaseException catch (e) {
+      if (e.code == 'no-app') {
+        // No app exists, proceed with initialization
+        if (kDebugMode) {
+          print('Initializing Firebase...');
+        }
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        if (kDebugMode) {
+          print('Firebase initialized successfully');
+        }
+        return;
+      }
+      rethrow;
+    }
+  } catch (e) {
+    // Handle the specific duplicate-app error
+    if (e.toString().contains('duplicate-app')) {
+      print('Firebase already initialized (duplicate app error caught)');
+      return;
+    }
+    print('Unexpected Firebase initialization error: $e');
+    // Continue running the app even if Firebase fails
+  }
+}
+void testDatabase() async {
+  try {
+    final database = FirebaseDatabase.instance;
+    await database.ref().child('test').set({'test': 'value'});
+    print('Database write test successful');
+  } catch (e) {
+    print('Database test failed: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -53,8 +107,8 @@ class MyApp extends StatelessWidget {
             return MaterialPageRoute(builder: (_) => const UploadDataPage());
           case '/view_data':
             return MaterialPageRoute(builder: (_) => const ViewDataPage(allData: [],));
-          case '/predictions':    // <---- Add this line
-         return MaterialPageRoute(builder: (_) => const PredictionScreen(initialData: {},));
+          case '/predictions':
+            return MaterialPageRoute(builder: (_) => const PredictionScreen(initialData: {},));
           default:
             return MaterialPageRoute(
               builder: (_) => const Scaffold(
