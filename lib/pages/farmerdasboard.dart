@@ -44,20 +44,17 @@ class FarmerDashboard extends StatelessWidget {
             ),
 
             // Back icon
-            Positioned(
-              top: 40,
-              left: 10,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black),
-                onPressed: () {
-                  if (fromLogin) {
-                    Navigator.pop(context); // back to login
-                  } else {
-                    Navigator.pop(context); // back to signup
-                  }
-                },
-              ),
-            ),
+           Positioned(
+  top: 40,
+  left: 10,
+  child: IconButton(
+    icon: const Icon(Icons.arrow_back, color: Colors.black),
+    onPressed: () {
+      // Replace current screen with login
+       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    },
+  ),
+),
 
             // Main content (scrollable)
             SafeArea(
