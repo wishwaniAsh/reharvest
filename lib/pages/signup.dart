@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'top_curve_clipper.dart';
-import '../services/auth_service.dart'; // Import the auth service
+import '../services/auth_service.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -21,12 +21,12 @@ class _SignUpPageState extends State<SignUpPage> {
 
   bool _passwordVisible = false;
   bool _confirmPasswordVisible = false;
-  bool _isLoading = false; // Add loading state
+  bool _isLoading = false;
 
   String? selectedRole;
   final List<String> roles = ['Admin', 'Farm-holder', 'Farmer'];
 
-  final AuthService _authService = AuthService(); // Create auth service instance
+  final AuthService _authService = AuthService();
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +179,7 @@ class _SignUpPageState extends State<SignUpPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _registerUser, // Disable when loading
+                        onPressed: _isLoading ? null : _registerUser,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFBFBF6E),
                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -269,92 +269,78 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   // Registration function
-void _registerUser() async {
-  if (_formKey.currentState!.validate() && selectedRole != null) {
-    setState(() => _isLoading = true);
+  void _registerUser() async {
+    if (_formKey.currentState!.validate() && selectedRole != null) {
+      setState(() => _isLoading = true);
 
-    try {
-      User? user = await _authService.registerWithEmailAndPassword(
-        emailController.text.trim(),
-        passwordController.text.trim(),
-        usernameController.text.trim(),
-        selectedRole!,
-      );
-
-      if (user != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registered successfully!')),
+      try {
+        User? user = await _authService.registerWithEmailAndPassword(
+          emailController.text.trim(),
+          passwordController.text.trim(),
+          usernameController.text.trim(),
+          selectedRole!,
         );
 
-        // Navigate immediately without delay
-        if (selectedRole == 'Admin') {
-          Navigator.pushNamedAndRemoveUntil(
-            context, 
-            '/admin_dashboard', 
-            (route) => false
+        if (user != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Registered successfully!')),
           );
-        } else {
-          Navigator.pushNamedAndRemoveUntil(
-            context, 
-            '/user_dashboard', 
-            (route) => false
-          );
+
+          // Navigate based on role
+          if (selectedRole == 'Admin') {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/admin_dashboard',
+              (route) => false,
+            );
+          } else if (selectedRole == 'Farm-holder') {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/farmholderscreen',
+              (route) => false,
+            );
+          } else if (selectedRole == 'Farmer') {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/farmerdashboard',
+              (route) => false,
+            );
+          } else {
+            // Fallback for unknown roles
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/user_dashboard',
+              (route) => false,
+            );
+          }
         }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration failed. Please try again.')),
-        );
-      }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage = 'Registration failed';
-      
-      if (e.code == 'weak-password') {
-        errorMessage = 'Password is too weak';
-      } else if (e.code == 'email-already-in-use') {
-        errorMessage = 'Email is already registered';
-      } else if (e.code == 'invalid-email') {
-        errorMessage = 'Invalid email address';
-      }
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
-    } catch (e) {
-      // Check if user was actually created despite the error
-      User? currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null && currentUser.email == emailController.text.trim()) {
-        // User was created, so show success and navigate
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registration completed successfully!')),
-        );
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = 'Registration failed';
         
-        if (selectedRole == 'Admin') {
-          Navigator.pushNamedAndRemoveUntil(
-            context, 
-            '/admin_dashboard', 
-            (route) => false
-          );
-        } else {
-          Navigator.pushNamedAndRemoveUntil(
-            context, 
-            '/user_dashboard', 
-            (route) => false
-          );
+        if (e.code == 'weak-password') {
+          errorMessage = 'Password is too weak';
+        } else if (e.code == 'email-already-in-use') {
+          errorMessage = 'Email is already registered';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Invalid email address';
         }
-      } else {
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}')),
         );
+      } finally {
+        setState(() => _isLoading = false);
       }
-    } finally {
-      setState(() => _isLoading = false);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields and select a role')),
+      );
     }
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Please fill all fields and select a role')),
-    );
   }
-}
 
   Widget _buildTextField(
     TextEditingController controller,

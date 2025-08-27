@@ -86,6 +86,8 @@ class AuthService {
     } catch (e) {
       print('Realtime Database error: $e');
       print('Error type: ${e.runtimeType}');
+      // Re-throw to handle in the UI
+      rethrow;
     }
   }
 
@@ -104,9 +106,6 @@ class AuthService {
         email: email,
         password: password,
       );
-      
-      // Add a small delay to work around the PigeonUserDetails bug
-      await Future.delayed(const Duration(milliseconds: 100));
       
       return result.user;
     } on FirebaseAuthException catch (e) {
@@ -127,18 +126,23 @@ class AuthService {
   Future<Map<String, dynamic>?> getUserData(String uid) async {
     try {
       final snapshot = await _database.child('users').child(uid).get();
-      if (snapshot.exists && snapshot.value != null) {
-        // Handle cases where value might not be a Map
-        if (snapshot.value is Map) {
-          return Map<String, dynamic>.from(snapshot.value as Map);
+      
+      if (snapshot.exists) {
+        final data = snapshot.value;
+        
+        if (data is Map) {
+          return Map<String, dynamic>.from(data);
         } else {
-          print('User data is not in expected Map format: ${snapshot.value}');
+          print('User data is not in expected Map format: $data');
           return null;
         }
+      } else {
+        print('No user data found for UID: $uid');
+        return null;
       }
-      return null;
     } catch (e) {
       print('Error getting user data: $e');
+      print('Full error: ${e.toString()}');
       return null;
     }
   }

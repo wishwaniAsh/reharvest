@@ -4,7 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import '../services/auth_service.dart'; // Import auth service
+import '../services/auth_service.dart';
+import 'top_curve_clipper.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -276,38 +277,23 @@ class _LoginPageState extends State<LoginPage> {
             print('Error fetching user data: $e');
           }
 
+          // Use selected role as fallback if database role is null
           final effectiveRole = userRole ?? selectedRole;
 
           if (effectiveRole == null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please select your role to continue')),
+              const SnackBar(content: Text('Role information not found. Please contact support.')),
             );
             setState(() => _isLoading = false);
             return;
           }
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Logged in successfully!'),
-            ),
+            const SnackBar(content: Text('Logged in successfully!')),
           );
 
           // Navigate based on role
-          if (effectiveRole == 'Admin') {
-            final allData = await loadSavedData();
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/admin_dashboard',
-              arguments: allData,
-              (route) => false,
-            );
-          } else {
-            Navigator.pushNamedAndRemoveUntil(
-              context,
-              '/user_dashboard',
-              (route) => false,
-            );
-          }
+          _navigateBasedOnRole(effectiveRole);
         }
       } on FirebaseAuthException catch (e) {
         String errorMessage = 'Login failed';
@@ -332,21 +318,7 @@ class _LoginPageState extends State<LoginPage> {
               const SnackBar(content: Text('Login successful!')),
             );
 
-            if (selectedRole == 'Admin') {
-              final allData = await loadSavedData();
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/admin_dashboard',
-                arguments: allData,
-                (route) => false,
-              );
-            } else {
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                '/user_dashboard',
-                (route) => false,
-              );
-            }
+            _navigateBasedOnRole(selectedRole!);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Login failed. Please try again.')),
@@ -363,6 +335,40 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  // Helper method to navigate based on role
+  void _navigateBasedOnRole(String role) {
+    switch (role) {
+      case 'Admin':
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/admin_dashboard',
+          (route) => false,
+        );
+        break;
+      case 'Farm-holder':
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/farmholderscreen',
+          (route) => false,
+        );
+        break;
+      case 'Farmer':
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/farmerdashboard',
+          (route) => false,
+        );
+        break;
+      default:
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/user_dashboard',
+          (route) => false,
+        );
+        break;
+    }
+  }
+
   // Load saved data
   Future<List<Map<String, String>>> loadSavedData() async {
     final prefs = await SharedPreferences.getInstance();
@@ -373,24 +379,4 @@ class _LoginPageState extends State<LoginPage> {
     }
     return [];
   }
-}
-
-class TopCurveClipper extends CustomClipper<Path> {
-  @override
-  Path getClip(Size size) {
-    final path = Path();
-    path.lineTo(0, size.height * 0.5);
-    path.quadraticBezierTo(
-      size.width / 2,
-      size.height * 1.2,
-      size.width,
-      size.height * 0.5,
-    );
-    path.lineTo(size.width, 0);
-    path.close();
-    return path;
-  }
-
-  @override
-  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }

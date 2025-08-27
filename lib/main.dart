@@ -1,5 +1,7 @@
 import 'package:ReHarvest/pages/admin_dashboard.dart';
 import 'package:ReHarvest/pages/datapage.dart';
+import 'package:ReHarvest/pages/farmerdasboard.dart';
+import 'package:ReHarvest/pages/farmholderscreen.dart';
 import 'package:ReHarvest/pages/forgotpassword.dart';
 import 'package:ReHarvest/pages/login_page.dart';
 import 'package:ReHarvest/pages/prediction_screen.dart';
@@ -73,42 +75,28 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       initialRoute: '/',
-      onGenerateRoute: (settings) {
-        if (settings.name == '/data_screen') {
-          final args = settings.arguments as List<Map<String, String>>?;
-
-          return MaterialPageRoute(
-            builder: (context) => DataPage(
-              allData: args ?? [], // pass empty list if no data provided
-            ),
-          );
-        }
-
-        // fallback to named routes
-        switch (settings.name) {
-          case '/':
-            return MaterialPageRoute(builder: (_) => const StartPage());
-          case '/login':
-            return MaterialPageRoute(builder: (_) => const LoginPage());
-          case '/admin_dashboard':
-            return MaterialPageRoute(builder: (_) => const AdminDashboard());
-          case '/forgot_password':
-            return MaterialPageRoute(builder: (_) => const ForgotPasswordPage());
-          case '/signup':
-            return MaterialPageRoute(builder: (_) => const SignUpPage());
-          case '/upload':
-            return MaterialPageRoute(builder: (_) => const UploadDataPage());
-          case '/view_data':
-            return MaterialPageRoute(builder: (_) => const ViewDataPage(allData: [],));
-          case '/predictions':
-            return MaterialPageRoute(builder: (_) => const PredictionScreen(initialData: {},));
-          default:
-            return MaterialPageRoute(
-              builder: (_) => const Scaffold(
-                body: Center(child: Text('Page not found')),
-              ),
-            );
-        }
+      routes: {
+        '/': (context) => const StartPage(),
+        '/login': (context) => const LoginPage(),
+        '/admin_dashboard': (context) => const AdminDashboard(),
+        '/farmholderscreen': (context) => const FarmHolderDashboard(),
+        '/farmerdashboard': (context) => const FarmerDashboard(),
+        '/forgot_password': (context) => const ForgotPasswordPage(),
+        '/signup': (context) => const SignUpPage(),
+        '/upload': (context) => const UploadDataPage(),
+        '/view_data': (context) => const ViewDataPage(allData: []),
+        '/predictions': (context) => const PredictionScreen(initialData: {}),
+        '/data_screen': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as List<Map<String, String>>?;
+          return DataPage(allData: args ?? []);
+        },
+      },
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (_) => const Scaffold(
+            body: Center(child: Text('Page not found')),
+          ),
+        );
       },
     );
   }
