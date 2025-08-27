@@ -56,6 +56,7 @@ class DefaultFirebaseOptions {
     projectId: 'reharvest-efbda',
     authDomain: 'reharvest-efbda.firebaseapp.com',
     storageBucket: 'reharvest-efbda.firebasestorage.app',
+    databaseURL: 'https://reharvest-efbda-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -64,6 +65,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '518240721279',
     projectId: 'reharvest-efbda',
     storageBucket: 'reharvest-efbda.firebasestorage.app',
+    databaseURL: 'https://reharvest-efbda-default-rtdb.asia-southeast1.firebasedatabase.app',
   );
-
 }

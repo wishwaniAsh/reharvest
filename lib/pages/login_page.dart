@@ -16,7 +16,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   String? selectedRole;
-  final TextEditingController emailController = TextEditingController(); // Changed from usernameController
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool _isLoading = false;
 
@@ -68,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
                 key: _formKey,
                 child: Column(
                   children: [
-                    // Email Field (changed from username)
+                    // Email Field
                     TextFormField(
                       controller: emailController,
                       style: GoogleFonts.montserrat(),
@@ -116,17 +116,17 @@ class _LoginPageState extends State<LoginPage> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      validator: (value) => value == null || value.isEmpty 
-                          ? 'Please enter your password' 
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter your password'
                           : null,
                     ),
                     const SizedBox(height: 16),
 
-                    // Role Dropdown (optional now, since we'll get role from Firebase)
+                    // Role Dropdown (now required)
                     DropdownButtonFormField<String>(
                       value: selectedRole,
                       decoration: InputDecoration(
-                        labelText: 'Select your role (Optional)',
+                        labelText: 'Select your role',
                         labelStyle: GoogleFonts.montserrat(),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -151,6 +151,12 @@ class _LoginPageState extends State<LoginPage> {
                         setState(() {
                           selectedRole = value;
                         });
+                      },
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please select your role';
+                        }
+                        return null;
                       },
                     ),
                     const SizedBox(height: 24),
@@ -243,90 +249,51 @@ class _LoginPageState extends State<LoginPage> {
 
   // Login function
   void _loginUser() async {
-  if (_formKey.currentState!.validate()) {
-    setState(() => _isLoading = true);
+    if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
 
-    try {
-      print('Attempting to login: ${emailController.text.trim()}');
-      
-      // Authenticate with Firebase
-      User? user = await _authService.loginWithEmailAndPassword(
-        emailController.text.trim(),
-        passwordController.text.trim(),
-      );
+      try {
+        print('Attempting to login: ${emailController.text.trim()}');
 
-      if (user != null) {
-        print('User authenticated: ${user.uid}');
-        
-        // Get user data from Firebase - with error handling
-        Map<String, dynamic>? userData;
-        String? userRole;
-        
-        try {
-          userData = await _authService.getUserData(user.uid);
-          userRole = userData?['role'] as String?;
-          print('User role from database: $userRole');
-        } catch (e) {
-          print('Error fetching user data: $e');
-          // Continue even if user data fetch fails
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Logged in successfully!'),
-          ),
+        // Authenticate with Firebase
+        User? user = await _authService.loginWithEmailAndPassword(
+          emailController.text.trim(),
+          passwordController.text.trim(),
         );
 
-        // Navigate based on user role or dropdown selection
-        final effectiveRole = userRole ?? selectedRole;
-        print('Effective role: $effectiveRole');
-        
-        if (effectiveRole == 'Admin') {
-          print('Navigating to admin dashboard');
-          final allData = await loadSavedData();
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/admin_dashboard',
-            arguments: allData,
-            (route) => false,
-          );
-        } else {
-          print('Navigating to user dashboard');
-          Navigator.pushNamedAndRemoveUntil(
-            context,
-            '/user_dashboard',
-            (route) => false,
-          );
-        }
-      }
-    } on FirebaseAuthException catch (e) {
-      String errorMessage = 'Login failed';
-      
-      if (e.code == 'user-not-found') {
-        errorMessage = 'No user found with this email';
-      } else if (e.code == 'wrong-password') {
-        errorMessage = 'Incorrect password';
-      } else if (e.code == 'invalid-email') {
-        errorMessage = 'Invalid email address';
-      }
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMessage)),
-      );
-    } catch (e) {
-      // Handle the PigeonUserDetails error gracefully
-      if (e.toString().contains('PigeonUserDetails')) {
-        print('PigeonUserDetails error handled gracefully');
-        
-        // Check if user is actually logged in despite the error
-        final currentUser = _authService.getCurrentUser();
-        if (currentUser != null) {
+        if (user != null) {
+          print('User authenticated: ${user.uid}');
+
+          // Get user data from Firebase
+          Map<String, dynamic>? userData;
+          String? userRole;
+
+          try {
+            userData = await _authService.getUserData(user.uid);
+            userRole = userData?['role'] as String?;
+            print('User role from database: $userRole');
+          } catch (e) {
+            print('Error fetching user data: $e');
+          }
+
+          final effectiveRole = userRole ?? selectedRole;
+
+          if (effectiveRole == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Please select your role to continue')),
+            );
+            setState(() => _isLoading = false);
+            return;
+          }
+
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Login successful!')),
+            const SnackBar(
+              content: Text('Logged in successfully!'),
+            ),
           );
-          
-          // Navigate based on dropdown selection since we can't get user data
-          if (selectedRole == 'Admin') {
+
+          // Navigate based on role
+          if (effectiveRole == 'Admin') {
             final allData = await loadSavedData();
             Navigator.pushNamedAndRemoveUntil(
               context,
@@ -341,23 +308,62 @@ class _LoginPageState extends State<LoginPage> {
               (route) => false,
             );
           }
+        }
+      } on FirebaseAuthException catch (e) {
+        String errorMessage = 'Login failed';
+
+        if (e.code == 'user-not-found') {
+          errorMessage = 'No user found with this email';
+        } else if (e.code == 'wrong-password') {
+          errorMessage = 'Incorrect password';
+        } else if (e.code == 'invalid-email') {
+          errorMessage = 'Invalid email address';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      } catch (e) {
+        // Handle special error gracefully
+        if (e.toString().contains('PigeonUserDetails')) {
+          final currentUser = _authService.getCurrentUser();
+          if (currentUser != null && selectedRole != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Login successful!')),
+            );
+
+            if (selectedRole == 'Admin') {
+              final allData = await loadSavedData();
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/admin_dashboard',
+                arguments: allData,
+                (route) => false,
+              );
+            } else {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/user_dashboard',
+                (route) => false,
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Login failed. Please try again.')),
+            );
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Login failed. Please try again.')),
+            SnackBar(content: Text('Login error: ${e.toString()}')),
           );
         }
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Login error: ${e.toString()}')),
-        );
+      } finally {
+        setState(() => _isLoading = false);
       }
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
-}
 
-  // Keep your existing loadSavedData method
+  // Load saved data
   Future<List<Map<String, String>>> loadSavedData() async {
     final prefs = await SharedPreferences.getInstance();
     final savedData = prefs.getString('allData');

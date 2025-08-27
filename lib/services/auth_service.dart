@@ -1,9 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final DatabaseReference _database = FirebaseDatabase.instance.ref();
+  final DatabaseReference _database;
+
+  AuthService() : _database = FirebaseDatabase.instanceFor(
+          app: Firebase.app(),
+          databaseURL: 'https://reharvest-efbda-default-rtdb.asia-southeast1.firebasedatabase.app'
+        ).ref();
 
   // Register with email and password
   Future<User?> registerWithEmailAndPassword(
