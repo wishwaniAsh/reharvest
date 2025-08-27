@@ -3,8 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
-import 'top_curve_clipper.dart';
-
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
