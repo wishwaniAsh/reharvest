@@ -37,9 +37,10 @@ class AuthService {
         
         // Update user profile with display name
         await user.updateDisplayName(username);
+        
+        return user;
       }
-
-      return user;
+      return null;
     } on FirebaseAuthException catch (e) {
       print('Firebase Auth Error: ${e.code} - ${e.message}');
       rethrow;
@@ -48,6 +49,13 @@ class AuthService {
       // Even if there's an error, check if user was created
       User? currentUser = _auth.currentUser;
       if (currentUser != null && currentUser.email == email) {
+        // Try to save user data even if there was an error
+        try {
+          await _saveUserDataToRealtimeDatabase(currentUser.uid, email, username, role);
+          await currentUser.updateDisplayName(username);
+        } catch (dbError) {
+          print('Error saving user data after registration: $dbError');
+        }
         return currentUser;
       }
       return null;
@@ -65,6 +73,7 @@ class AuthService {
       print('Path: users/$uid');
       print('Data: {uid: $uid, email: $email, username: $username, role: $role}');
       
+      // Use set() instead of update() to ensure all data is written
       await _database.child('users').child(uid).set({
         'uid': uid,
         'email': email,
@@ -81,6 +90,7 @@ class AuthService {
         print('Data verification successful: ${snapshot.value}');
       } else {
         print('Data verification failed: No data found');
+        throw Exception('User data not saved to database');
       }
       
     } catch (e) {
@@ -155,6 +165,29 @@ class AuthService {
     } catch (e) {
       print('Error getting user role: $e');
       return null;
+    }
+  }
+
+  // NEW: Check if user exists in database and create default data if missing
+  Future<void> ensureUserDataExists(User user, {String defaultRole = 'Farmer'}) async {
+    try {
+      final snapshot = await _database.child('users').child(user.uid).get();
+      
+      if (!snapshot.exists) {
+        print('User data not found in database, creating default data...');
+        // Create default user data
+        await _database.child('users').child(user.uid).set({
+          'uid': user.uid,
+          'email': user.email,
+          'username': user.displayName ?? user.email!.split('@')[0],
+          'role': defaultRole,
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+        print('Default user data created successfully');
+      }
+    } catch (e) {
+      print('Error ensuring user data exists: $e');
+      rethrow;
     }
   }
 }

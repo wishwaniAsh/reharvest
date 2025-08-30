@@ -286,20 +286,27 @@ class _SignUpPageState extends State<SignUpPage> {
             const SnackBar(content: Text('Registered successfully!')),
           );
 
+          // Get the role from database to ensure consistency
+          Map<String, dynamic>? userData = await _authService.getUserData(user.uid);
+          String? userRole = userData?['role'] as String?;
+
+          // Use the role from database, fallback to selectedRole if needed
+          final effectiveRole = userRole ?? selectedRole;
+
           // Navigate based on role
-          if (selectedRole == 'Admin') {
+          if (effectiveRole == 'Admin') {
             Navigator.pushNamedAndRemoveUntil(
               context,
               '/admin_dashboard',
               (route) => false,
             );
-          } else if (selectedRole == 'Farm-holder') {
+          } else if (effectiveRole == 'Farm-holder') {
             Navigator.pushNamedAndRemoveUntil(
               context,
               '/farmholderscreen',
               (route) => false,
             );
-          } else if (selectedRole == 'Farmer') {
+          } else if (effectiveRole == 'Farmer') {
             Navigator.pushNamedAndRemoveUntil(
               context,
               '/farmerdashboard',

@@ -2,8 +2,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 import '../services/auth_service.dart';
 import 'top_curve_clipper.dart';
 
@@ -16,12 +14,10 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  String? selectedRole;
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool _isLoading = false;
 
-  final List<String> roles = ['Admin', 'Farm-holder', 'Farmer'];
   final AuthService _authService = AuthService();
 
   @override
@@ -31,7 +27,6 @@ class _LoginPageState extends State<LoginPage> {
     if (args != null && args == 'logout') {
       emailController.clear();
       passwordController.clear();
-      selectedRole = null;
     }
   }
 
@@ -124,51 +119,6 @@ class _LoginPageState extends State<LoginPage> {
                       validator: (value) => value == null || value.isEmpty
                           ? 'Please enter your password'
                           : null,
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Role Dropdown
-                    StatefulBuilder(
-                      builder: (context, setInnerState) {
-                        return DropdownButtonFormField<String>(
-                          value: selectedRole,
-                          decoration: InputDecoration(
-                            labelText: 'Select your role',
-                            labelStyle: GoogleFonts.montserrat(),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: const BorderSide(
-                                  color: Color(0xFFBFBF6E), width: 1.5),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide:
-                                  const BorderSide(color: Color(0xFFBFBF6E), width: 2),
-                            ),
-                          ),
-                          dropdownColor: const Color(0xFFFFF3DC),
-                          style: GoogleFonts.montserrat(color: Colors.black),
-                          icon: const Icon(Icons.arrow_drop_down),
-                          borderRadius: BorderRadius.circular(8),
-                          items: roles.map((role) {
-                            return DropdownMenuItem<String>(
-                              value: role,
-                              child: Text(role, style: GoogleFonts.montserrat()),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setInnerState(() {
-                              selectedRole = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please select your role';
-                            }
-                            return null;
-                          },
-                        );
-                      },
                     ),
                     const SizedBox(height: 24),
 
@@ -271,14 +221,16 @@ class _LoginPageState extends State<LoginPage> {
         );
 
         if (user != null) {
+          // Ensure user data exists (create default if missing)
+          await _authService.ensureUserDataExists(user);
+          
           // Get role from database
           Map<String, dynamic>? userData = await _authService.getUserData(user.uid);
           String? userRole = userData?['role'] as String?;
 
-          final effectiveRole = userRole ?? selectedRole;
-          if (effectiveRole == null) {
+          if (userRole == null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Role information not found.')),
+              const SnackBar(content: Text('Role information not found. Please contact support.')),
             );
             setState(() => _isLoading = false);
             return;
@@ -288,7 +240,7 @@ class _LoginPageState extends State<LoginPage> {
             const SnackBar(content: Text('Logged in successfully!')),
           );
 
-          _navigateBasedOnRole(effectiveRole);
+          _navigateBasedOnRole(userRole);
         }
       } on FirebaseAuthException catch (e) {
         String errorMessage = 'Login failed';
