@@ -12,12 +12,14 @@ class AdminDashboard extends StatelessWidget {
 
     return WillPopScope(
       onWillPop: () async {
-        if (fromLogin) {
-          Navigator.pop(context); // Go back to login with filled form
-        } else {
-          Navigator.pop(context); // Go back to signup with filled form
-        }
-        return false;
+        // Always navigate to login when back pressed
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          '/login',
+          (Route<dynamic> route) => false,
+          arguments: 'back',
+        );
+        return false; // Prevent default pop
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFFFF3DC),
@@ -50,11 +52,12 @@ class AdminDashboard extends StatelessWidget {
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.black),
                 onPressed: () {
-                  if (fromLogin) {
-                    Navigator.pop(context); // back to login
-                  } else {
-                    Navigator.pop(context); // back to signup
-                  }
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/login',
+                    (Route<dynamic> route) => false,
+                    arguments: 'back',
+                  );
                 },
               ),
             ),
