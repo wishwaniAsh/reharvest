@@ -1,3 +1,5 @@
+import 'package:ReHarvest/services/notification_service.dart';
+import 'package:ReHarvest/services/prediction_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'top_curve_clipper.dart';
@@ -16,6 +18,12 @@ class _ReviewPageState extends State<ReviewPage> {
   late TextEditingController vegetableController;
   late TextEditingController quantityController;
   late TextEditingController dateTimeController;
+  
+  // Add months list for date parsing
+  final List<String> months = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
 
   @override
   void initState() {
@@ -59,6 +67,56 @@ class _ReviewPageState extends State<ReviewPage> {
         ),
       ),
     );
+  }
+
+  // Helper method to extract month from dateTime string
+  String _extractMonthFromDateTime(String dateTime) {
+    try {
+      final parts = dateTime.split(' ');
+      if (parts.isNotEmpty) {
+        final datePart = parts[0];
+        final dt = DateTime.parse(datePart);
+        return months[dt.month - 1];
+      }
+    } catch (e) {
+      debugPrint("Error extracting month: $e");
+    }
+    return 'January'; // default month
+  }
+
+  // Method to send notifications to farm holders and waste management
+  Future<void> _sendNotifications() async {
+    final notificationService = NotificationService();
+    final predictionService = PredictionService();
+    
+    double predictedWaste = 0;
+    
+    try {
+      // Get prediction
+      predictedWaste = await predictionService.getPrediction(
+        vegetableController.text,
+        _extractMonthFromDateTime(dateTimeController.text),
+        double.parse(quantityController.text.replaceAll(RegExp(r'[^0-9.]'), '')),
+      );
+    } catch (e) {
+      debugPrint("Prediction error: $e");
+      predictedWaste = 0; // Set default value if prediction fails
+    }
+
+    // Prepare notification data
+    final notificationData = {
+      'truckId': truckIdController.text,
+      'vegetable': vegetableController.text,
+      'quantity': quantityController.text,
+      'dateTime': dateTimeController.text,
+      'predictedWaste': predictedWaste,
+      'type': 'new_delivery',
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    // Send to both farm holders and waste management
+    await notificationService.sendToFarmHolders(notificationData);
+    await notificationService.sendToWasteManagement(notificationData);
   }
 
   @override
@@ -109,12 +167,61 @@ class _ReviewPageState extends State<ReviewPage> {
                     height: 200,
                   ),
                   const SizedBox(height: 16),
+                  
+                  // Labels for the input fields
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Truck ID:',
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   _buildEditableBox(truckIdController),
                   const SizedBox(height: 12),
+                  
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Vegetable:',
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   _buildEditableBox(vegetableController),
                   const SizedBox(height: 12),
+                  
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Quantity (kg):',
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   _buildEditableBox(quantityController),
                   const SizedBox(height: 12),
+                  
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Date & Time:',
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
                   _buildEditableBox(dateTimeController),
                   const SizedBox(height: 24),
 
@@ -123,22 +230,49 @@ class _ReviewPageState extends State<ReviewPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
                       ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => DataPage(
-                                allData: [
-                                  {
-                                    'truckId': truckIdController.text,
-                                    'vegetable': vegetableController.text,
-                                    'quantity': quantityController.text,
-                                    'dateTime': dateTimeController.text,
-                                  },
-                                ],
+                        onPressed: () async {
+                          // Show loading indicator
+                          showDialog(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (context) => const Center(
+                              child: CircularProgressIndicator(
+                                color: Color(0xFF4A3B2A),
                               ),
                             ),
                           );
+
+                          try {
+                            // Send notifications
+                            await _sendNotifications();
+
+                            // Navigate to DataPage
+                            Navigator.pop(context); // Close loading dialog
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => DataPage(
+                                  allData: [
+                                    {
+                                      'truckId': truckIdController.text,
+                                      'vegetable': vegetableController.text,
+                                      'quantity': quantityController.text,
+                                      'dateTime': dateTimeController.text,
+                                    },
+                                  ],
+                                ),
+                              ),
+                            );
+                          } catch (e) {
+                            // Handle errors
+                            Navigator.pop(context); // Close loading dialog
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFBFBF6E),
