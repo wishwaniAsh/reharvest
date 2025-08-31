@@ -14,7 +14,7 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
   List<Map<String, dynamic>> _wasteData = [];
   final NotificationService _notificationService = NotificationService();
   bool _isLoading = true;
-  String _selectedFilter = 'all'; // 'all', 'this_month', 'high_waste'
+  String _selectedFilter = 'all'; // 'all', 'pending', 'accepted', 'composted'
 
   @override
   void initState() {
@@ -35,31 +35,14 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
   }
 
   List<Map<String, dynamic>> get _filteredData {
-    final now = DateTime.now();
-    
     switch (_selectedFilter) {
-      case 'this_month':
-        return _wasteData.where((item) {
-          try {
-            final timestamp = item['timestamp'];
-            if (timestamp != null) {
-              final date = DateTime.parse(timestamp);
-              return date.year == now.year && date.month == now.month;
-            }
-          } catch (e) {
-            debugPrint("Error parsing timestamp: $e");
-          }
-          return false;
-        }).toList();
-      
-      case 'high_waste':
-        return _wasteData.where((item) {
-          final waste = item['predictedWaste'] ?? 0;
-          final quantity = double.tryParse(item['quantity']?.replaceAll(RegExp(r'[^0-9.]'), '') ?? '0') ?? 0;
-          final wastePercentage = quantity > 0 ? (waste / quantity) * 100 : 0;
-          return wastePercentage > 20; // More than 20% waste
-        }).toList();
-      
+      case 'pending':
+        return _wasteData.where((item) => item['status'] == 'pending').toList();
+      case 'accepted':
+        return _wasteData.where((item) => 
+          item['status'] == 'partially_accepted' || item['status'] == 'fully_accepted').toList();
+      case 'composted':
+        return _wasteData.where((item) => item['status'] == 'composted').toList();
       default:
         return _wasteData;
     }
@@ -68,6 +51,20 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
   double _calculateTotalPredictedWaste() {
     return _filteredData.fold(0.0, (sum, item) {
       final waste = item['predictedWaste'] ?? 0;
+      return sum + (waste is double ? waste : double.parse(waste.toString()));
+    });
+  }
+
+  double _calculateTotalAcceptedWaste() {
+    return _filteredData.fold(0.0, (sum, item) {
+      final waste = item['acceptedWaste'] ?? 0;
+      return sum + (waste is double ? waste : double.parse(waste.toString()));
+    });
+  }
+
+  double _calculateTotalRemainingWaste() {
+    return _filteredData.fold(0.0, (sum, item) {
+      final waste = item['remainingWaste'] ?? 0;
       return sum + (waste is double ? waste : double.parse(waste.toString()));
     });
   }
@@ -83,9 +80,11 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
   @override
   Widget build(BuildContext context) {
     final filteredData = _filteredData;
-    final totalWaste = _calculateTotalPredictedWaste();
+    final totalPredicted = _calculateTotalPredictedWaste();
+    final totalAccepted = _calculateTotalAcceptedWaste();
+    final totalRemaining = _calculateTotalRemainingWaste();
     final totalQuantity = _calculateTotalQuantity();
-    final wastePercentage = totalQuantity > 0 ? (totalWaste / totalQuantity) * 100 : 0;
+    final wastePercentage = totalQuantity > 0 ? (totalPredicted / totalQuantity) * 100 : 0;
 
     return WillPopScope(
       onWillPop: () async {
@@ -99,7 +98,7 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
       },
       child: Scaffold(
         backgroundColor: const Color(0xFFFFF3DC),
-        body: Column(
+        body: Stack(
           children: [
             // Curved header
             ClipPath(
@@ -139,9 +138,9 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
             ),
 
             // Main content
-            Expanded(
+            SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 60, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
                 child: Column(
                   children: [
                     // Filter chips
@@ -151,9 +150,11 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
                         children: [
                           _buildFilterChip('All', 'all'),
                           const SizedBox(width: 8),
-                          _buildFilterChip('This Month', 'this_month'),
+                          _buildFilterChip('Pending', 'pending'),
                           const SizedBox(width: 8),
-                          _buildFilterChip('High Waste', 'high_waste'),
+                          _buildFilterChip('Accepted', 'accepted'),
+                          const SizedBox(width: 8),
+                          _buildFilterChip('Composted', 'composted'),
                         ],
                       ),
                     ),
@@ -183,21 +184,27 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
                               mainAxisAlignment: MainAxisAlignment.spaceAround,
                               children: [
                                 _buildStatItem(
-                                  'Total Deliveries',
+                                  'Total',
                                   filteredData.length.toString(),
-                                  Icons.local_shipping,
+                                  Icons.list,
                                 ),
                                 _buildStatItem(
-                                  'Total Waste',
-                                  '${totalWaste.toStringAsFixed(1)}kg',
+                                  'Predicted',
+                                  '${totalPredicted.toStringAsFixed(1)}kg',
                                   Icons.warning,
                                   color: Colors.orange,
                                 ),
                                 _buildStatItem(
-                                  'Waste %',
-                                  '${wastePercentage.toStringAsFixed(1)}%',
-                                  Icons.analytics,
-                                  color: wastePercentage > 20 ? Colors.red : Colors.green,
+                                  'Accepted',
+                                  '${totalAccepted.toStringAsFixed(1)}kg',
+                                  Icons.check_circle,
+                                  color: Colors.green,
+                                ),
+                                _buildStatItem(
+                                  'Remaining',
+                                  '${totalRemaining.toStringAsFixed(1)}kg',
+                                  Icons.recycling,
+                                  color: Colors.blue,
                                 ),
                               ],
                             ),
@@ -248,7 +255,7 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
                                   itemCount: filteredData.length,
                                   itemBuilder: (context, index) {
                                     final item = filteredData[index];
-                                    return _buildWasteItem(item);
+                                    return _buildWasteItem(item, index);
                                   },
                                 ),
                     ),
@@ -362,16 +369,33 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
     );
   }
 
-  Widget _buildWasteItem(Map<String, dynamic> item) {
+  Widget _buildWasteItem(Map<String, dynamic> item, int index) {
     final vegetable = item['vegetable'] ?? 'Unknown';
     final truckId = item['truckId'] ?? 'N/A';
     final quantity = item['quantity'] ?? '0';
     final predictedWaste = item['predictedWaste'] ?? 0;
+    final acceptedWaste = item['acceptedWaste'] ?? 0;
+    final remainingWaste = item['remainingWaste'] ?? predictedWaste;
+    final status = item['status'] ?? 'pending';
     final dateTime = item['dateTime'] ?? '';
-    final timestamp = item['timestamp'] ?? '';
 
-    final cleanQuantity = double.tryParse(quantity.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
-    final wastePercentage = cleanQuantity > 0 ? (predictedWaste / cleanQuantity) * 100 : 0;
+    Color statusColor = Colors.orange;
+    IconData statusIcon = Icons.pending;
+    String statusText = 'Pending Acceptance';
+
+    if (status == 'partially_accepted') {
+      statusColor = Colors.blue;
+      statusIcon = Icons.check_circle_outline;
+      statusText = 'Partially Accepted';
+    } else if (status == 'fully_accepted') {
+      statusColor = Colors.green;
+      statusIcon = Icons.check_circle;
+      statusText = 'Fully Accepted';
+    } else if (status == 'composted') {
+      statusColor = Colors.purple;
+      statusIcon = Icons.recycling;
+      statusText = 'Composted';
+    }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -405,27 +429,49 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(
-                  Icons.warning,
-                  color: wastePercentage > 20 ? Colors.orange : Colors.green,
-                  size: 16,
-                ),
+                Icon(statusIcon, color: statusColor, size: 16),
                 const SizedBox(width: 4),
                 Text(
-                  '${predictedWaste.toStringAsFixed(1)}kg waste (${wastePercentage.toStringAsFixed(1)}%)',
+                  statusText,
                   style: GoogleFonts.montserrat(
-                    color: wastePercentage > 20 ? Colors.orange : Colors.green,
-                    fontSize: 12,
+                    color: statusColor,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
+            Text(
+              'Predicted: ${predictedWaste.toStringAsFixed(1)}kg • '
+              'Accepted: ${acceptedWaste.toStringAsFixed(1)}kg • '
+              'Remaining: ${remainingWaste.toStringAsFixed(1)}kg',
+              style: GoogleFonts.montserrat(
+                color: Colors.white70,
+                fontSize: 11,
+              ),
+            ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.info_outline, color: Colors.white),
-          onPressed: () => _showItemDetails(item),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (status != 'composted' && remainingWaste > 0)
+              IconButton(
+                icon: const Icon(Icons.recycling, color: Colors.green, size: 24),
+                onPressed: () => _sendToCompost(index),
+                tooltip: 'Send to compost',
+              ),
+            if (status == 'composted')
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red, size: 24),
+                onPressed: () => _deleteComposted(index),
+                tooltip: 'Delete composted record',
+              ),
+            IconButton(
+              icon: const Icon(Icons.info_outline, color: Colors.white, size: 24),
+              onPressed: () => _showItemDetails(item),
+            ),
+          ],
         ),
       ),
     );
@@ -441,6 +487,88 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
       debugPrint("Error formatting date: $e");
     }
     return dateTime;
+  }
+
+  void _sendToCompost(int index) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Send to Compost',
+          style: GoogleFonts.montserrat(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to send the remaining waste to compost?',
+          style: GoogleFonts.montserrat(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.montserrat()),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _notificationService.sendToCompost(index);
+              await _loadWasteData();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Remaining waste sent to compost successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF4A3B2A),
+            ),
+            child: Text('Confirm', style: GoogleFonts.montserrat(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _deleteComposted(int index) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          'Delete Record',
+          style: GoogleFonts.montserrat(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: Text(
+          'Are you sure you want to delete this composted record? This action cannot be undone.',
+          style: GoogleFonts.montserrat(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.montserrat()),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _notificationService.deleteCompostedRecord(index);
+              await _loadWasteData();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Composted record deleted successfully'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: Text('Delete', style: GoogleFonts.montserrat(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showItemDetails(Map<String, dynamic> item) {
@@ -471,11 +599,26 @@ class WasteItemDetailsDialog extends StatelessWidget {
     final truckId = item['truckId'] ?? 'N/A';
     final quantity = item['quantity'] ?? '0';
     final predictedWaste = item['predictedWaste'] ?? 0;
+    final acceptedWaste = item['acceptedWaste'] ?? 0;
+    final remainingWaste = item['remainingWaste'] ?? predictedWaste;
+    final status = item['status'] ?? 'pending';
     final dateTime = item['dateTime'] ?? '';
     final timestamp = item['timestamp'] ?? '';
+    final compostedAt = item['compostedAt'] ?? '';
 
-    final cleanQuantity = double.tryParse(quantity.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
-    final wastePercentage = cleanQuantity > 0 ? (predictedWaste / cleanQuantity) * 100 : 0;
+    Color statusColor = Colors.orange;
+    String statusText = 'Pending Acceptance';
+
+    if (status == 'partially_accepted') {
+      statusColor = Colors.blue;
+      statusText = 'Partially Accepted';
+    } else if (status == 'fully_accepted') {
+      statusColor = Colors.green;
+      statusText = 'Fully Accepted';
+    } else if (status == 'composted') {
+      statusColor = Colors.purple;
+      statusText = 'Composted';
+    }
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -504,19 +647,37 @@ class WasteItemDetailsDialog extends StatelessWidget {
               valueColor: Colors.red,
             ),
             _buildDetailRow(
-              'Waste Percentage',
-              '${wastePercentage.toStringAsFixed(1)}%',
-              valueColor: wastePercentage > 20 ? Colors.orange : Colors.green,
+              'Accepted Waste',
+              '${acceptedWaste.toStringAsFixed(1)} kg',
+              valueColor: Colors.green,
+            ),
+            _buildDetailRow(
+              'Remaining Waste',
+              '${remainingWaste.toStringAsFixed(1)} kg',
+              valueColor: Colors.orange,
+            ),
+            _buildDetailRow(
+              'Status',
+              statusText,
+              valueColor: statusColor,
             ),
             
             if (timestamp.isNotEmpty)
               _buildDetailRow(
-                'Recorded',
+                'Received',
                 _formatTimestamp(timestamp),
                 valueColor: Colors.grey,
               ),
             
+            if (compostedAt.isNotEmpty)
+              _buildDetailRow(
+                'Composted At',
+                _formatTimestamp(compostedAt),
+                valueColor: Colors.purple,
+              ),
+            
             const SizedBox(height: 20),
+            
             Center(
               child: ElevatedButton(
                 onPressed: () => Navigator.pop(context),
@@ -588,8 +749,18 @@ class WasteAnalysisSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalWaste = wasteData.fold(0.0, (sum, item) {
+    final totalPredicted = wasteData.fold(0.0, (sum, item) {
       final waste = item['predictedWaste'] ?? 0;
+      return sum + (waste is double ? waste : double.parse(waste.toString()));
+    });
+
+    final totalAccepted = wasteData.fold(0.0, (sum, item) {
+      final waste = item['acceptedWaste'] ?? 0;
+      return sum + (waste is double ? waste : double.parse(waste.toString()));
+    });
+
+    final totalRemaining = wasteData.fold(0.0, (sum, item) {
+      final waste = item['remainingWaste'] ?? 0;
       return sum + (waste is double ? waste : double.parse(waste.toString()));
     });
 
@@ -599,21 +770,24 @@ class WasteAnalysisSheet extends StatelessWidget {
       return sum + cleanQuantity;
     });
 
-    final wastePercentage = totalQuantity > 0 ? (totalWaste / totalQuantity) * 100 : 0;
+    final wastePercentage = totalQuantity > 0 ? (totalPredicted / totalQuantity) * 100 : 0;
+    final acceptanceRate = totalPredicted > 0 ? (totalAccepted / totalPredicted) * 100 : 0;
 
     // Group by vegetable
     final vegetableStats = <String, Map<String, double>>{};
     for (var item in wasteData) {
       final vegetable = item['vegetable'] ?? 'Unknown';
-      final waste = item['predictedWaste'] ?? 0;
-      final quantity = double.tryParse((item['quantity'] ?? '0').replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0;
+      final predicted = item['predictedWaste'] ?? 0;
+      final accepted = item['acceptedWaste'] ?? 0;
+      final remaining = item['remainingWaste'] ?? 0;
       
       if (!vegetableStats.containsKey(vegetable)) {
-        vegetableStats[vegetable] = {'waste': 0.0, 'quantity': 0.0};
+        vegetableStats[vegetable] = {'predicted': 0.0, 'accepted': 0.0, 'remaining': 0.0};
       }
       
-      vegetableStats[vegetable]!['waste'] = vegetableStats[vegetable]!['waste']! + waste;
-      vegetableStats[vegetable]!['quantity'] = vegetableStats[vegetable]!['quantity']! + quantity;
+      vegetableStats[vegetable]!['predicted'] = vegetableStats[vegetable]!['predicted']! + predicted;
+      vegetableStats[vegetable]!['accepted'] = vegetableStats[vegetable]!['accepted']! + accepted;
+      vegetableStats[vegetable]!['remaining'] = vegetableStats[vegetable]!['remaining']! + remaining;
     }
 
     return Container(
@@ -669,10 +843,18 @@ class WasteAnalysisSheet extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildAnalysisStat('Total Deliveries', wasteData.length.toString()),
-                      _buildAnalysisStat('Total Quantity', '${totalQuantity.toStringAsFixed(1)}kg'),
-                      _buildAnalysisStat('Total Waste', '${totalWaste.toStringAsFixed(1)}kg'),
+                      _buildAnalysisStat('Total', wasteData.length.toString()),
+                      _buildAnalysisStat('Predicted', '${totalPredicted.toStringAsFixed(1)}kg'),
+                      _buildAnalysisStat('Accepted', '${totalAccepted.toStringAsFixed(1)}kg'),
+                      _buildAnalysisStat('Remaining', '${totalRemaining.toStringAsFixed(1)}kg'),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
                       _buildAnalysisStat('Waste %', '${wastePercentage.toStringAsFixed(1)}%'),
+                      _buildAnalysisStat('Acceptance', '${acceptanceRate.toStringAsFixed(1)}%'),
                     ],
                   ),
                 ],
@@ -708,20 +890,24 @@ class WasteAnalysisSheet extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final vegetable = vegetableStats.keys.elementAt(index);
                       final stats = vegetableStats[vegetable]!;
-                      final vegWastePercentage = stats['quantity']! > 0 
-                          ? (stats['waste']! / stats['quantity']!) * 100 
+                      final acceptanceRate = stats['predicted']! > 0 
+                          ? (stats['accepted']! / stats['predicted']!) * 100 
                           : 0;
                       
                       return ListTile(
                         leading: const Icon(Icons.eco, color: Colors.green),
                         title: Text(vegetable),
                         subtitle: Text(
-                          '${stats['waste']!.toStringAsFixed(1)}kg waste (${vegWastePercentage.toStringAsFixed(1)}%)',
+                          'Predicted: ${stats['predicted']!.toStringAsFixed(1)}kg • '
+                          'Accepted: ${stats['accepted']!.toStringAsFixed(1)}kg • '
+                          'Remaining: ${stats['remaining']!.toStringAsFixed(1)}kg',
+                          style: GoogleFonts.montserrat(fontSize: 12),
                         ),
                         trailing: Text(
-                          '${stats['quantity']!.toStringAsFixed(1)}kg',
+                          '${acceptanceRate.toStringAsFixed(0)}%',
                           style: GoogleFonts.montserrat(
                             fontWeight: FontWeight.bold,
+                            color: acceptanceRate > 50 ? Colors.green : Colors.orange,
                           ),
                         ),
                       );
@@ -741,6 +927,7 @@ class WasteAnalysisSheet extends StatelessWidget {
           style: GoogleFonts.montserrat(
             color: Colors.white,
             fontWeight: FontWeight.bold,
+            fontSize: 12,
           ),
         ),
         Text(
