@@ -9,6 +9,7 @@ import 'package:ReHarvest/pages/signup.dart';
 import 'package:ReHarvest/pages/startpage.dart';
 import 'package:ReHarvest/pages/uploaddatapage.dart';
 import 'package:ReHarvest/pages/viewdatapage.dart';
+import 'package:ReHarvest/pages/wastemanage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -83,6 +84,7 @@ class MyApp extends StatelessWidget {
         '/farmerdashboard': (context) => const FarmerDashboard(),
         '/forgot_password': (context) => const ForgotPasswordPage(),
         '/signup': (context) => const SignUpPage(),
+        '/waste': (context) => const WasteManagementPage(),
         '/upload': (context) => const UploadDataPage(),
         '/view_data': (context) => const ViewDataPage(allData: []),
         '/predictions': (context) => const PredictionScreen(initialData: {}),
