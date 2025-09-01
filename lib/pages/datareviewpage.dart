@@ -63,7 +63,6 @@ class _ReviewPageState extends State<ReviewPage> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
         ),
       ),
     );
@@ -82,41 +81,6 @@ class _ReviewPageState extends State<ReviewPage> {
       debugPrint("Error extracting month: $e");
     }
     return 'January'; // default month
-  }
-
-  // Method to send notifications to farm holders and waste management
-  Future<void> _sendNotifications() async {
-    final notificationService = NotificationService();
-    final predictionService = PredictionService();
-    
-    double predictedWaste = 0;
-    
-    try {
-      // Get prediction
-      predictedWaste = await predictionService.getPrediction(
-        vegetableController.text,
-        _extractMonthFromDateTime(dateTimeController.text),
-        double.parse(quantityController.text.replaceAll(RegExp(r'[^0-9.]'), '')),
-      );
-    } catch (e) {
-      debugPrint("Prediction error: $e");
-      predictedWaste = 0; // Set default value if prediction fails
-    }
-
-    // Prepare notification data
-    final notificationData = {
-      'truckId': truckIdController.text,
-      'vegetable': vegetableController.text,
-      'quantity': quantityController.text,
-      'dateTime': dateTimeController.text,
-      'predictedWaste': predictedWaste,
-      'type': 'new_delivery',
-      'timestamp': DateTime.now().toIso8601String(),
-    };
-
-    // Send to both farm holders and waste management
-    await notificationService.sendToFarmHolders(notificationData);
-    await notificationService.sendToWasteManagement(notificationData);
   }
 
   @override
@@ -243,8 +207,43 @@ class _ReviewPageState extends State<ReviewPage> {
                           );
 
                           try {
-                            // Send notifications
-                            await _sendNotifications();
+                            // Get prediction first
+                            final predictionService = PredictionService();
+                            double predictedWaste = 0;
+                            
+                            try {
+                              predictedWaste = await predictionService.getPrediction(
+                                vegetableController.text,
+                                _extractMonthFromDateTime(dateTimeController.text),
+                                double.parse(quantityController.text.replaceAll(RegExp(r'[^0-9.]'), '')),
+                              ).timeout(const Duration(seconds: 10)); // Add timeout
+                            } catch (e) {
+                              debugPrint("Prediction error: $e");
+                              // Show error message and don't save data if prediction fails
+                              Navigator.pop(context); // Close loading dialog
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Prediction service unavailable. Please try again later.'),
+                                  backgroundColor: Colors.red,
+                                  duration: const Duration(seconds: 5),
+                                ),
+                              );
+                              return; // Exit the function without saving
+                            }
+
+                            // Prepare waste data
+                            final wasteData = {
+                              'truckId': truckIdController.text,
+                              'vegetable': vegetableController.text,
+                              'quantity': quantityController.text,
+                              'dateTime': dateTimeController.text,
+                              'predictedWaste': predictedWaste,
+                              'timestamp': DateTime.now().toIso8601String(),
+                            };
+
+                            // Send to waste management
+                            final notificationService = NotificationService();
+                            await notificationService.sendToWasteManagement(wasteData);
 
                             // Navigate to DataPage
                             Navigator.pop(context); // Close loading dialog
@@ -263,13 +262,21 @@ class _ReviewPageState extends State<ReviewPage> {
                                 ),
                               ),
                             );
+                            
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Data submitted successfully! Waste prediction: ${predictedWaste.toStringAsFixed(1)}kg'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
                           } catch (e) {
                             // Handle errors
                             Navigator.pop(context); // Close loading dialog
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Error: $e'),
+                                content: Text('Error: Failed to submit data. Please check your connection and try again.'),
                                 backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 5),
                               ),
                             );
                           }

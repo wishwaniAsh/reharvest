@@ -57,7 +57,7 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
 
   double _calculateTotalAcceptedWaste() {
     return _filteredData.fold(0.0, (sum, item) {
-      final waste = item['acceptedWaste'] ?? 0;
+      final waste = item['totalAccepted'] ?? 0; // Changed from acceptedWaste to totalAccepted
       return sum + (waste is double ? waste : double.parse(waste.toString()));
     });
   }
@@ -255,7 +255,7 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
                                   itemCount: filteredData.length,
                                   itemBuilder: (context, index) {
                                     final item = filteredData[index];
-                                    return _buildWasteItem(item, index);
+                                    return _buildWasteItem(item);
                                   },
                                 ),
                     ),
@@ -369,15 +369,16 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
     );
   }
 
-  Widget _buildWasteItem(Map<String, dynamic> item, int index) {
+  Widget _buildWasteItem(Map<String, dynamic> item) {
     final vegetable = item['vegetable'] ?? 'Unknown';
     final truckId = item['truckId'] ?? 'N/A';
     final quantity = item['quantity'] ?? '0';
     final predictedWaste = item['predictedWaste'] ?? 0;
-    final acceptedWaste = item['acceptedWaste'] ?? 0;
+    final totalAccepted = item['totalAccepted'] ?? 0; // Changed from acceptedWaste
     final remainingWaste = item['remainingWaste'] ?? predictedWaste;
     final status = item['status'] ?? 'pending';
     final dateTime = item['dateTime'] ?? '';
+    final wasteId = item['timestamp'] ?? ''; // Get the waste ID
 
     Color statusColor = Colors.orange;
     IconData statusIcon = Icons.pending;
@@ -443,7 +444,7 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
             ),
             Text(
               'Predicted: ${predictedWaste.toStringAsFixed(1)}kg • '
-              'Accepted: ${acceptedWaste.toStringAsFixed(1)}kg • '
+              'Accepted: ${totalAccepted.toStringAsFixed(1)}kg • '
               'Remaining: ${remainingWaste.toStringAsFixed(1)}kg',
               style: GoogleFonts.montserrat(
                 color: Colors.white70,
@@ -458,13 +459,13 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
             if (status != 'composted' && remainingWaste > 0)
               IconButton(
                 icon: const Icon(Icons.recycling, color: Colors.green, size: 24),
-                onPressed: () => _sendToCompost(index),
+                onPressed: () => _sendToCompost(wasteId),
                 tooltip: 'Send to compost',
               ),
             if (status == 'composted')
               IconButton(
                 icon: const Icon(Icons.delete, color: Colors.red, size: 24),
-                onPressed: () => _deleteComposted(index),
+                onPressed: () => _deleteComposted(wasteId),
                 tooltip: 'Delete composted record',
               ),
             IconButton(
@@ -489,7 +490,7 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
     return dateTime;
   }
 
-  void _sendToCompost(int index) async {
+  void _sendToCompost(String wasteId) async {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -511,7 +512,7 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              await _notificationService.sendToCompost(index);
+              await _notificationService.sendToCompost(wasteId);
               await _loadWasteData();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -530,62 +531,67 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
     );
   }
 
-  void _deleteComposted(int index) async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Delete Record',
-          style: GoogleFonts.montserrat(
-            fontWeight: FontWeight.bold,
-          ),
+  void _deleteComposted(String wasteId) async {
+  // First find the index of the item to delete
+  final index = _wasteData.indexWhere((item) => item['timestamp'] == wasteId);
+  
+  if (index == -1) return;
+  
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(
+        'Delete Record',
+        style: GoogleFonts.montserrat(
+          fontWeight: FontWeight.bold,
         ),
-        content: Text(
-          'Are you sure you want to delete this composted record? This action cannot be undone.',
-          style: GoogleFonts.montserrat(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.montserrat()),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await _notificationService.deleteCompostedRecord(index);
-              await _loadWasteData();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Composted record deleted successfully'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
-            child: Text('Delete', style: GoogleFonts.montserrat(color: Colors.white)),
-          ),
-        ],
       ),
-    );
-  }
+      content: Text(
+        'Are you sure you want to delete this composted record? This action cannot be undone.',
+        style: GoogleFonts.montserrat(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel', style: GoogleFonts.montserrat()),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(context);
+            await _notificationService.deleteCompostedRecord(index as String);
+            await _loadWasteData();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Composted record deleted successfully'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.red,
+          ),
+          child: Text('Delete', style: GoogleFonts.montserrat(color: Colors.white)),
+        ),
+      ],
+    ),
+  );
+}
 
   void _showItemDetails(Map<String, dynamic> item) {
-    showDialog(
-      context: context,
-      builder: (context) => WasteItemDetailsDialog(item: item),
-    );
-  }
+  showDialog(
+    context: context,
+    builder: (context) => WasteItemDetailsDialog(item: item),
+  );
+}
 
-  void _showWasteAnalysis() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => WasteAnalysisSheet(wasteData: _wasteData),
-    );
-  }
+void _showWasteAnalysis() {
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => WasteAnalysisSheet(wasteData: _wasteData),
+  );
+}
 }
 
 class WasteItemDetailsDialog extends StatelessWidget {
@@ -599,7 +605,7 @@ class WasteItemDetailsDialog extends StatelessWidget {
     final truckId = item['truckId'] ?? 'N/A';
     final quantity = item['quantity'] ?? '0';
     final predictedWaste = item['predictedWaste'] ?? 0;
-    final acceptedWaste = item['acceptedWaste'] ?? 0;
+    final totalAccepted = item['totalAccepted'] ?? 0; // Changed from acceptedWaste
     final remainingWaste = item['remainingWaste'] ?? predictedWaste;
     final status = item['status'] ?? 'pending';
     final dateTime = item['dateTime'] ?? '';
@@ -648,7 +654,7 @@ class WasteItemDetailsDialog extends StatelessWidget {
             ),
             _buildDetailRow(
               'Accepted Waste',
-              '${acceptedWaste.toStringAsFixed(1)} kg',
+              '${totalAccepted.toStringAsFixed(1)} kg',
               valueColor: Colors.green,
             ),
             _buildDetailRow(
@@ -755,7 +761,7 @@ class WasteAnalysisSheet extends StatelessWidget {
     });
 
     final totalAccepted = wasteData.fold(0.0, (sum, item) {
-      final waste = item['acceptedWaste'] ?? 0;
+      final waste = item['totalAccepted'] ?? 0; // Changed from acceptedWaste
       return sum + (waste is double ? waste : double.parse(waste.toString()));
     });
 
@@ -778,7 +784,7 @@ class WasteAnalysisSheet extends StatelessWidget {
     for (var item in wasteData) {
       final vegetable = item['vegetable'] ?? 'Unknown';
       final predicted = item['predictedWaste'] ?? 0;
-      final accepted = item['acceptedWaste'] ?? 0;
+      final accepted = item['totalAccepted'] ?? 0; // Changed from acceptedWaste
       final remaining = item['remainingWaste'] ?? 0;
       
       if (!vegetableStats.containsKey(vegetable)) {

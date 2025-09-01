@@ -17,6 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _passwordVisible = false;
 
   final AuthService _authService = AuthService();
 
@@ -64,6 +65,12 @@ class _LoginPageState extends State<LoginPage> {
                 key: _formKey,
                 child: Column(
                   children: [
+                    Image.asset(
+                      'assets/images/login.png',
+                      height: 200,
+                    ),
+                    const SizedBox(height: 16),
+
                     // Email Field
                     TextFormField(
                       controller: emailController,
@@ -73,13 +80,13 @@ class _LoginPageState extends State<LoginPage> {
                         labelStyle: GoogleFonts.montserrat(),
                         prefixIcon: const Icon(Icons.email),
                         focusedBorder: OutlineInputBorder(
-                          borderSide:
-                              const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFBFBF6E), width: 2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderSide:
-                              const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFBFBF6E), width: 1.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -96,23 +103,35 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Password Field
+                    // Password Field with Visibility Toggle
                     TextFormField(
                       controller: passwordController,
-                      obscureText: true,
+                      obscureText: !_passwordVisible,
                       style: GoogleFonts.montserrat(),
                       decoration: InputDecoration(
                         labelText: 'Password',
                         labelStyle: GoogleFonts.montserrat(),
                         prefixIcon: const Icon(Icons.lock),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _passwordVisible
+                                ? Icons.visibility
+                                : Icons.visibility_off,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _passwordVisible = !_passwordVisible;
+                            });
+                          },
+                        ),
                         focusedBorder: OutlineInputBorder(
-                          borderSide:
-                              const BorderSide(color: Color(0xFFBFBF6E), width: 2),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFBFBF6E), width: 2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         enabledBorder: OutlineInputBorder(
-                          borderSide:
-                              const BorderSide(color: Color(0xFFBFBF6E), width: 1.5),
+                          borderSide: const BorderSide(
+                              color: Color(0xFFBFBF6E), width: 1.5),
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -140,7 +159,6 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                     ),
-
                     const SizedBox(height: 12),
 
                     // Forgot Password
@@ -156,34 +174,14 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 16),
-                    Text('Or login with', style: GoogleFonts.montserrat()),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.email, color: Colors.grey),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: const FaIcon(FontAwesomeIcons.facebook, color: Colors.blue),
-                          onPressed: () {},
-                        ),
-                        IconButton(
-                          icon: const FaIcon(FontAwesomeIcons.apple, color: Colors.black),
-                          onPressed: () {},
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
 
                     // Register Option
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text("Don't have an account? ", style: GoogleFonts.montserrat()),
+                        Text("Don't have an account? ",
+                            style: GoogleFonts.montserrat()),
                         TextButton(
                           onPressed: () {
                             Navigator.pushNamed(context, '/signup');
@@ -214,23 +212,22 @@ class _LoginPageState extends State<LoginPage> {
       setState(() => _isLoading = true);
 
       try {
-        // Authenticate with Firebase
         User? user = await _authService.loginWithEmailAndPassword(
           emailController.text.trim(),
           passwordController.text.trim(),
         );
 
         if (user != null) {
-          // Ensure user data exists (create default if missing)
           await _authService.ensureUserDataExists(user);
-          
-          // Get role from database
+
           Map<String, dynamic>? userData = await _authService.getUserData(user.uid);
           String? userRole = userData?['role'] as String?;
 
           if (userRole == null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Role information not found. Please contact support.')),
+              const SnackBar(
+                  content: Text(
+                      'Role information not found. Please contact support.')),
             );
             setState(() => _isLoading = false);
             return;
@@ -257,7 +254,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // Navigate based on role
   void _navigateBasedOnRole(String role) {
     switch (role) {
       case 'Admin':

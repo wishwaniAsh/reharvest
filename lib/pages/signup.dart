@@ -67,11 +67,18 @@ class _SignUpPageState extends State<SignUpPage> {
           Align(
             alignment: Alignment.center,
             child: SingleChildScrollView(
+              
               padding: const EdgeInsets.fromLTRB(24, 180, 24, 24),
+              
               child: Form(
                 key: _formKey,
                 child: Column(
                   children: [
+                    Image.asset(
+                    'assets/images/signup.png',
+                    height: 200,
+                  ),
+                  const SizedBox(height: 16),
                     _buildTextField(usernameController, 'User name'),
                     const SizedBox(height: 12),
                     _buildTextField(
@@ -198,33 +205,6 @@ class _SignUpPageState extends State<SignUpPage> {
                                 ),
                               ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // Or sign up with
-                    Row(
-                      children: [
-                        const Expanded(child: Divider(thickness: 1)),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: Text(
-                            'Or Sign up with',
-                            style: GoogleFonts.montserrat(),
-                          ),
-                        ),
-                        const Expanded(child: Divider(thickness: 1)),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Social Icons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: const [
-                        FaIcon(FontAwesomeIcons.facebook, size: 32),
-                        FaIcon(FontAwesomeIcons.google, size: 32),
-                        FaIcon(FontAwesomeIcons.apple, size: 32),
-                      ],
                     ),
                     const SizedBox(height: 20),
 

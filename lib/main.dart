@@ -80,7 +80,7 @@ class MyApp extends StatelessWidget {
         '/': (context) => const StartPage(),
         '/login': (context) => const LoginPage(),
         '/admin_dashboard': (context) => const AdminDashboard(),
-        '/farmholderscreen': (context) => const FarmHolderDashboard(),
+        '/farmholderscreen': (context) => const FarmHolderDashboard(farmHolderId: '',),
         '/farmerdashboard': (context) => const FarmerDashboard(),
         '/forgot_password': (context) => const ForgotPasswordPage(),
         '/signup': (context) => const SignUpPage(),

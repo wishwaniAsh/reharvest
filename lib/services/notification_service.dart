@@ -8,29 +8,10 @@ class NotificationService {
   NotificationService._internal();
 
   // Keys for SharedPreferences
-  static const String _farmHolderDataKey = 'farm_holder_notifications';
   static const String _wasteManagementDataKey = 'waste_management_data';
-  static const String _compostDataKey = 'compost_data';
+  static const String _farmAcceptancesKey = 'farm_acceptances';
 
-  // Send data to farm holders
-  Future<void> sendToFarmHolders(Map<String, dynamic> data) async {
-    final prefs = await SharedPreferences.getInstance();
-    final currentData = await getFarmHolderNotifications();
-    
-    final notificationData = {
-      ...data,
-      'timestamp': data['timestamp'] ?? DateTime.now().toIso8601String(),
-      'read': false,
-      'acceptedWaste': 0.0, // Initially no waste accepted
-      'remainingWaste': data['predictedWaste'] ?? 0.0, // Initially all waste remains
-      'status': 'pending', // pending, partially_accepted, fully_accepted, composted
-    };
-    
-    currentData.insert(0, notificationData);
-    await prefs.setString(_farmHolderDataKey, jsonEncode(currentData));
-  }
-
-  // Send data to waste management
+  // Send data to waste management (from admin)
   Future<void> sendToWasteManagement(Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
     final currentData = await getWasteManagementData();
@@ -38,9 +19,10 @@ class NotificationService {
     final wasteData = {
       ...data,
       'timestamp': data['timestamp'] ?? DateTime.now().toIso8601String(),
-      'acceptedWaste': 0.0,
+      'totalAccepted': 0.0, // Total accepted by all farm holders
       'remainingWaste': data['predictedWaste'] ?? 0.0,
       'status': 'pending',
+      'farmAcceptances': {}, // Store individual farm acceptances
     };
     
     currentData.insert(0, wasteData);
@@ -48,75 +30,61 @@ class NotificationService {
   }
 
   // Farm holder accepts waste
-  Future<void> acceptWaste(int index, double acceptedAmount) async {
+  Future<void> acceptWaste(String wasteId, String farmHolderId, double acceptedAmount) async {
     final prefs = await SharedPreferences.getInstance();
-    final notifications = await getFarmHolderNotifications();
+    final wasteData = await getWasteManagementData();
     
-    if (index < notifications.length) {
-      final predictedWaste = notifications[index]['predictedWaste'] ?? 0.0;
-      final remaining = predictedWaste - acceptedAmount;
+    final wasteIndex = wasteData.indexWhere((item) => item['timestamp'] == wasteId);
+    
+    if (wasteIndex != -1) {
+      final wasteItem = wasteData[wasteIndex];
+      final predictedWaste = wasteItem['predictedWaste'] ?? 0.0;
       
-      notifications[index]['acceptedWaste'] = acceptedAmount;
-      notifications[index]['remainingWaste'] = remaining > 0 ? remaining : 0;
-      notifications[index]['status'] = remaining > 0 ? 'partially_accepted' : 'fully_accepted';
-      notifications[index]['read'] = true;
-      
-      await prefs.setString(_farmHolderDataKey, jsonEncode(notifications));
-      
-      // Also update waste management data
-      final wasteData = await getWasteManagementData();
-      final matchingIndex = wasteData.indexWhere((item) => 
-          item['timestamp'] == notifications[index]['timestamp']);
-      
-      if (matchingIndex != -1) {
-        wasteData[matchingIndex]['acceptedWaste'] = acceptedAmount;
-        wasteData[matchingIndex]['remainingWaste'] = remaining > 0 ? remaining : 0;
-        wasteData[matchingIndex]['status'] = remaining > 0 ? 'partially_accepted' : 'fully_accepted';
-        await prefs.setString(_wasteManagementDataKey, jsonEncode(wasteData));
+      // Initialize farmAcceptances if not exists
+      if (wasteItem['farmAcceptances'] == null) {
+        wasteItem['farmAcceptances'] = {};
       }
+      
+      // Update this farm holder's acceptance
+      wasteItem['farmAcceptances'][farmHolderId] = acceptedAmount;
+      
+      // Calculate total accepted by all farm holders
+      final totalAccepted = wasteItem['farmAcceptances'].values.fold(0.0, (sum, amount) => sum + amount);
+      final remaining = predictedWaste - totalAccepted;
+      
+      wasteItem['totalAccepted'] = totalAccepted;
+      wasteItem['remainingWaste'] = remaining > 0 ? remaining : 0;
+      wasteItem['status'] = remaining > 0 ? 'partially_accepted' : 'fully_accepted';
+      
+      await prefs.setString(_wasteManagementDataKey, jsonEncode(wasteData));
+      
+      // Also update farm holder's personal acceptance record
+      final farmAcceptances = await getFarmAcceptances();
+      farmAcceptances[wasteId] = {
+        'acceptedAmount': acceptedAmount,
+        'timestamp': DateTime.now().toIso8601String(),
+        'wasteData': wasteItem,
+      };
+      await prefs.setString(_farmAcceptancesKey, jsonEncode(farmAcceptances));
     }
   }
 
   // Admin sends remaining waste to compost
-  Future<void> sendToCompost(int index) async {
+  Future<void> sendToCompost(String wasteId) async {
     final prefs = await SharedPreferences.getInstance();
     final wasteData = await getWasteManagementData();
     
-    if (index < wasteData.length) {
-      wasteData[index]['status'] = 'composted';
-      wasteData[index]['compostedAt'] = DateTime.now().toIso8601String();
-      
-      await prefs.setString(_wasteManagementDataKey, jsonEncode(wasteData));
-      
-      // Add to compost history
-      final compostData = await getCompostData();
-      compostData.add(wasteData[index]);
-      await prefs.setString(_compostDataKey, jsonEncode(compostData));
-    }
-  }
-
-  // Admin deletes composted record
-  Future<void> deleteCompostedRecord(int index) async {
-    final prefs = await SharedPreferences.getInstance();
-    final wasteData = await getWasteManagementData();
+    final wasteIndex = wasteData.indexWhere((item) => item['timestamp'] == wasteId);
     
-    if (index < wasteData.length && wasteData[index]['status'] == 'composted') {
-      wasteData.removeAt(index);
+    if (wasteIndex != -1) {
+      wasteData[wasteIndex]['status'] = 'composted';
+      wasteData[wasteIndex]['compostedAt'] = DateTime.now().toIso8601String();
+      
       await prefs.setString(_wasteManagementDataKey, jsonEncode(wasteData));
     }
   }
 
-  // Get farm holder notifications
-  Future<List<Map<String, dynamic>>> getFarmHolderNotifications() async {
-    final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString(_farmHolderDataKey);
-    if (data == null) return [];
-    
-    final List<dynamic> decoded = jsonDecode(data);
-    return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
-  }
-
-  // Get waste management data
+  // Get waste management data for admin
   Future<List<Map<String, dynamic>>> getWasteManagementData() async {
     final prefs = await SharedPreferences.getInstance();
     final data = prefs.getString(_wasteManagementDataKey);
@@ -126,31 +94,36 @@ class NotificationService {
     return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
   }
 
-  // Get compost data
-  Future<List<Map<String, dynamic>>> getCompostData() async {
+  // Get farm holder's personal acceptances
+  Future<Map<String, dynamic>> getFarmAcceptances() async {
     final prefs = await SharedPreferences.getInstance();
-    final data = prefs.getString(_compostDataKey);
-    if (data == null) return [];
+    final data = prefs.getString(_farmAcceptancesKey);
+    if (data == null) return {};
     
-    final List<dynamic> decoded = jsonDecode(data);
-    return decoded.map((e) => Map<String, dynamic>.from(e)).toList();
+    return Map<String, dynamic>.from(jsonDecode(data));
   }
 
-  // Mark notification as read
-  Future<void> markAsRead(int index) async {
-    final notifications = await getFarmHolderNotifications();
-    if (index < notifications.length) {
-      notifications[index]['read'] = true;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_farmHolderDataKey, jsonEncode(notifications));
-    }
+  // Get notifications for farm holder (waste that needs acceptance)
+  Future<List<Map<String, dynamic>>> getFarmHolderNotifications() async {
+    final wasteData = await getWasteManagementData();
+    final farmAcceptances = await getFarmAcceptances();
+    
+    // Return waste items that are pending or partially accepted
+    return wasteData.where((item) {
+      final status = item['status'] ?? 'pending';
+      final wasteId = item['timestamp'];
+      final alreadyAccepted = farmAcceptances.containsKey(wasteId);
+      
+      return (status == 'pending' || status == 'partially_accepted') && !alreadyAccepted;
+    }).toList();
   }
 
   // Clear all data (for testing)
   Future<void> clearAllData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_farmHolderDataKey);
     await prefs.remove(_wasteManagementDataKey);
-    await prefs.remove(_compostDataKey);
+    await prefs.remove(_farmAcceptancesKey);
   }
+
+  Future<void> deleteCompostedRecord(String wasteId) async {}
 }
