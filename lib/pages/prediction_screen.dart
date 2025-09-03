@@ -151,11 +151,18 @@ class _PredictionScreenState extends State<PredictionScreen> {
           /// Content
           Align(
             alignment: Alignment.center,
+            
             child: SingleChildScrollView(
+              
               padding: const EdgeInsets.fromLTRB(24, 180, 24, 24),
               child: Column(
+                
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Image.asset(
+                    'assets/images/predict.png',
+                    height: 200,
+                  ),
                   /// Vegetable Autocomplete
                   _buildAutocomplete(
                     label: "Vegetable type",

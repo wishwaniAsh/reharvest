@@ -33,7 +33,8 @@ flutter:
   assets:
     - assets/images/reharvest_logo.png
     - assets/images/signup.png
-    - assets/images/login.png
+    - assets/images/login.png 
+    - assets/images/predict.png
 
 flutter_launcher_icons:
   android: true
