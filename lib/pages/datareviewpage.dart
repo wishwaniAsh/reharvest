@@ -1,3 +1,4 @@
+import 'package:ReHarvest/services/database_service.dart';
 import 'package:ReHarvest/services/notification_service.dart';
 import 'package:ReHarvest/services/prediction_service.dart';
 import 'package:flutter/material.dart';
@@ -19,7 +20,6 @@ class _ReviewPageState extends State<ReviewPage> {
   late TextEditingController quantityController;
   late TextEditingController dateTimeController;
   
-  // Add months list for date parsing
   final List<String> months = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
@@ -32,7 +32,6 @@ class _ReviewPageState extends State<ReviewPage> {
     vegetableController = TextEditingController(text: widget.data['vegetable']);
     quantityController = TextEditingController(text: widget.data['quantity']);
 
-    // Combine date and time safely
     final date = widget.data['date'] ?? '';
     final time = widget.data['time'] ?? '';
     final dateTimeText = (date.isNotEmpty && time.isNotEmpty)
@@ -68,7 +67,6 @@ class _ReviewPageState extends State<ReviewPage> {
     );
   }
 
-  // Helper method to extract month from dateTime string
   String _extractMonthFromDateTime(String dateTime) {
     try {
       final parts = dateTime.split(' ');
@@ -80,7 +78,7 @@ class _ReviewPageState extends State<ReviewPage> {
     } catch (e) {
       debugPrint("Error extracting month: $e");
     }
-    return 'January'; // default month
+    return 'January';
   }
 
   @override
@@ -89,7 +87,6 @@ class _ReviewPageState extends State<ReviewPage> {
       backgroundColor: const Color(0xFFFFF3DC),
       body: Stack(
         children: [
-          // Top header
           ClipPath(
             clipper: TopCurveClipper(),
             child: Container(
@@ -109,7 +106,6 @@ class _ReviewPageState extends State<ReviewPage> {
             ),
           ),
 
-          // Back button
           Positioned(
             top: 40,
             left: 10,
@@ -119,7 +115,6 @@ class _ReviewPageState extends State<ReviewPage> {
             ),
           ),
 
-          // Main content
           Align(
             alignment: Alignment.center,
             child: SingleChildScrollView(
@@ -132,7 +127,7 @@ class _ReviewPageState extends State<ReviewPage> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // Labels for the input fields
+                  // Input fields with labels
                   Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
@@ -195,7 +190,6 @@ class _ReviewPageState extends State<ReviewPage> {
                     children: [
                       ElevatedButton(
                         onPressed: () async {
-                          // Show loading indicator
                           showDialog(
                             context: context,
                             barrierDismissible: false,
@@ -207,7 +201,7 @@ class _ReviewPageState extends State<ReviewPage> {
                           );
 
                           try {
-                            // Get prediction first
+                            // Get prediction
                             final predictionService = PredictionService();
                             double predictedWaste = 0;
                             
@@ -216,23 +210,21 @@ class _ReviewPageState extends State<ReviewPage> {
                                 vegetableController.text,
                                 _extractMonthFromDateTime(dateTimeController.text),
                                 double.parse(quantityController.text.replaceAll(RegExp(r'[^0-9.]'), '')),
-                              ).timeout(const Duration(seconds: 10)); // Add timeout
+                              ).timeout(const Duration(seconds: 10));
                             } catch (e) {
-                              debugPrint("Prediction error: $e");
-                              // Show error message and don't save data if prediction fails
-                              Navigator.pop(context); // Close loading dialog
+                              Navigator.pop(context);
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
+                                const SnackBar(
                                   content: Text('Prediction service unavailable. Please try again later.'),
                                   backgroundColor: Colors.red,
-                                  duration: const Duration(seconds: 5),
+                                  duration: Duration(seconds: 5),
                                 ),
                               );
-                              return; // Exit the function without saving
+                              return;
                             }
 
-                            // Prepare waste data
-                            final wasteData = {
+                            // Prepare data for database
+                            final dataToSave = {
                               'truckId': truckIdController.text,
                               'vegetable': vegetableController.text,
                               'quantity': quantityController.text,
@@ -241,12 +233,15 @@ class _ReviewPageState extends State<ReviewPage> {
                               'timestamp': DateTime.now().toIso8601String(),
                             };
 
-                            // Send to waste management
+                            // Save to database
+                            await DatabaseService.saveHarvestData(dataToSave);
+
+                            // Send notification
                             final notificationService = NotificationService();
-                            await notificationService.sendToWasteManagement(wasteData);
+                            await notificationService.sendToWasteManagement(dataToSave);
 
                             // Navigate to DataPage
-                            Navigator.pop(context); // Close loading dialog
+                            Navigator.pop(context);
                             Navigator.push(
                               context,
                               MaterialPageRoute(
@@ -270,11 +265,10 @@ class _ReviewPageState extends State<ReviewPage> {
                               ),
                             );
                           } catch (e) {
-                            // Handle errors
-                            Navigator.pop(context); // Close loading dialog
+                            Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text('Error: Failed to submit data. Please check your connection and try again.'),
+                                content: Text('Error: Failed to submit data. $e'),
                                 backgroundColor: Colors.red,
                                 duration: const Duration(seconds: 5),
                               ),

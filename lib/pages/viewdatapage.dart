@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
+import 'package:ReHarvest/services/database_service.dart';
 import 'top_curve_clipper.dart';
 import 'detailpage.dart';
 
@@ -14,47 +13,35 @@ class ViewDataPage extends StatefulWidget {
 }
 
 class _ViewDataPageState extends State<ViewDataPage> {
-  List<Map<String, String>> filteredData = [];
+  List<Map<String, dynamic>> filteredData = [];
   TextEditingController searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadAndMergeData();
+    _loadDataFromFirebase();
   }
 
-  // Load saved data and merge with new data
-  Future<void> _loadAndMergeData() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    // Load saved data
-    final savedData = prefs.getString('allData');
-    List<Map<String, String>> storedData = [];
-    if (savedData != null) {
-      final List<dynamic> decoded = jsonDecode(savedData);
-      storedData = decoded.map((e) => Map<String, String>.from(e)).toList();
+  Future<void> _loadDataFromFirebase() async {
+    try {
+      final data = await DatabaseService.getHarvestData();
+      setState(() {
+        filteredData = data;
+      });
+    } catch (e) {
+      debugPrint('Error loading data from Firebase: $e');
+      // Fallback to passed data if Firebase fails
+      setState(() {
+        filteredData = widget.allData.map((e) => e as Map<String, dynamic>).toList();
+      });
     }
-
-    // Merge with new data passed from DataPage
-    final allMerged = [...storedData, ...widget.allData];
-
-    // Remove duplicates using truckId + dateTime as key
-    final uniqueData = {for (var e in allMerged) '${e['truckId']}_${e['dateTime']}': e}.values.toList();
-
-    // Save merged data permanently
-    await prefs.setString('allData', jsonEncode(uniqueData));
-
-    setState(() {
-      filteredData = uniqueData;
-    });
   }
 
-  // Filter data based on search query
   void _filterData(String query) {
     final data = filteredData.where((entry) {
-      final truckId = entry['truckId']?.toLowerCase() ?? '';
-      final vegetable = entry['vegetable']?.toLowerCase() ?? '';
-      final dateTime = entry['dateTime']?.toLowerCase() ?? '';
+      final truckId = entry['truckId']?.toString().toLowerCase() ?? '';
+      final vegetable = entry['vegetable']?.toString().toLowerCase() ?? '';
+      final dateTime = entry['dateTime']?.toString().toLowerCase() ?? '';
       final q = query.toLowerCase();
       return truckId.contains(q) || vegetable.contains(q) || dateTime.contains(q);
     }).toList();
@@ -72,7 +59,6 @@ class _ViewDataPageState extends State<ViewDataPage> {
         children: [
           Column(
             children: [
-              // Top curved header
               ClipPath(
                 clipper: TopCurveClipper(),
                 child: Container(
@@ -92,7 +78,6 @@ class _ViewDataPageState extends State<ViewDataPage> {
                 ),
               ),
 
-              // Search bar
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: TextField(
@@ -112,7 +97,6 @@ class _ViewDataPageState extends State<ViewDataPage> {
                 ),
               ),
 
-              // Data list
               Expanded(
                 child: filteredData.isEmpty
                     ? Center(
@@ -129,17 +113,24 @@ class _ViewDataPageState extends State<ViewDataPage> {
                         itemCount: filteredData.length,
                         itemBuilder: (context, index) {
                           final entry = filteredData[index];
-                          final truckId = entry['truckId'] ?? 'N/A';
-                          final dateTime = entry['dateTime'] ?? 'N/A';
-                          final vegetable = entry['vegetable'] ?? 'N/A';
-                          final quantity = entry['quantity'] ?? 'N/A';
+                          final truckId = entry['truckId']?.toString() ?? 'N/A';
+                          final dateTime = entry['dateTime']?.toString() ?? 'N/A';
+                          final vegetable = entry['vegetable']?.toString() ?? 'N/A';
+                          final quantity = entry['quantity']?.toString() ?? 'N/A';
+                          final predictedWaste = entry['predictedWaste']?.toString() ?? 'N/A';
 
                           return GestureDetector(
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => DetailPage(data: entry),
+                                  builder: (context) => DetailPage(data: {
+                                    'truckId': truckId,
+                                    'vegetable': vegetable,
+                                    'quantity': quantity,
+                                    'dateTime': dateTime,
+                                    'predictedWaste': predictedWaste,
+                                  }),
                                 ),
                               );
                             },
@@ -151,12 +142,32 @@ class _ViewDataPageState extends State<ViewDataPage> {
                                 color: const Color(0xFF4A3B2A),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Text(
-                                'Truck ID $truckId arrives at $dateTime with $vegetable $quantity kg.',
-                                style: GoogleFonts.montserrat(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Truck ID $truckId arrives at $dateTime',
+                                    style: GoogleFonts.montserrat(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Vegetable: $vegetable, Quantity: $quantity kg',
+                                    style: GoogleFonts.montserrat(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  if (predictedWaste != 'N/A')
+                                    Text(
+                                      'Predicted Waste: ${double.parse(predictedWaste).toStringAsFixed(1)} kg',
+                                      style: GoogleFonts.montserrat(
+                                        color: Colors.amber,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                           );
@@ -166,7 +177,6 @@ class _ViewDataPageState extends State<ViewDataPage> {
             ],
           ),
 
-          // Back button
           Positioned(
             top: 40,
             left: 10,

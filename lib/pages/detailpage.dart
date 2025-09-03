@@ -12,7 +12,8 @@ class DetailPage extends StatelessWidget {
     final truckId = data['truckId'] ?? 'N/A';
     final vegetable = data['vegetable'] ?? 'N/A';
     final quantity = data['quantity'] ?? 'N/A';
-    final dateTime = data['dateTime'] ?? 'N/A'; // now includes date + time
+    final dateTime = data['dateTime'] ?? 'N/A';
+    final predictedWaste = data['predictedWaste'] ?? 'N/A';
 
     return Scaffold(
       backgroundColor: const Color(0xFFFFF3DC),
@@ -28,7 +29,7 @@ class DetailPage extends StatelessWidget {
               alignment: Alignment.center,
               padding: const EdgeInsets.only(top: 40),
               child: Text(
-                'Data',
+                'Data Details',
                 style: GoogleFonts.montserrat(
                   fontSize: 26,
                   fontWeight: FontWeight.bold,
@@ -66,13 +67,52 @@ class DetailPage extends StatelessWidget {
                       color: const Color(0xFF4A3B2A),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Text(
-                      'Truck ID $truckId arrives at $dateTime with $vegetable $quantity kg.',
-                      style: GoogleFonts.montserrat(
-                        color: Colors.white,
-                        fontSize: 16,
-                      ),
-                      textAlign: TextAlign.center,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Truck ID: $truckId',
+                          style: GoogleFonts.montserrat(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Arrival Time: $dateTime',
+                          style: GoogleFonts.montserrat(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Vegetable: $vegetable',
+                          style: GoogleFonts.montserrat(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Quantity: $quantity kg',
+                          style: GoogleFonts.montserrat(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (predictedWaste != 'N/A') ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Predicted Waste: ${double.parse(predictedWaste).toStringAsFixed(1)} kg',
+                            style: GoogleFonts.montserrat(
+                              color: Colors.amber,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   const SizedBox(height: 24),
