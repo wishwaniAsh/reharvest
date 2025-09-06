@@ -19,10 +19,10 @@ class NotificationService {
     final wasteData = {
       ...data,
       'timestamp': data['timestamp'] ?? DateTime.now().toIso8601String(),
-      'totalAccepted': 0.0, // Total accepted by all farm holders
+      'totalAccepted': 0.0,
       'remainingWaste': data['predictedWaste'] ?? 0.0,
       'status': 'pending',
-      'farmAcceptances': {}, // Store individual farm acceptances
+      'farmAcceptances': {},
     };
     
     currentData.insert(0, wasteData);
@@ -40,15 +40,12 @@ class NotificationService {
       final wasteItem = wasteData[wasteIndex];
       final predictedWaste = wasteItem['predictedWaste'] ?? 0.0;
       
-      // Initialize farmAcceptances if not exists
       if (wasteItem['farmAcceptances'] == null) {
         wasteItem['farmAcceptances'] = {};
       }
       
-      // Update this farm holder's acceptance
       wasteItem['farmAcceptances'][farmHolderId] = acceptedAmount;
       
-      // Calculate total accepted by all farm holders
       final totalAccepted = wasteItem['farmAcceptances'].values.fold(0.0, (sum, amount) => sum + amount);
       final remaining = predictedWaste - totalAccepted;
       
@@ -58,7 +55,6 @@ class NotificationService {
       
       await prefs.setString(_wasteManagementDataKey, jsonEncode(wasteData));
       
-      // Also update farm holder's personal acceptance record
       final farmAcceptances = await getFarmAcceptances();
       farmAcceptances[wasteId] = {
         'acceptedAmount': acceptedAmount,
@@ -108,7 +104,6 @@ class NotificationService {
     final wasteData = await getWasteManagementData();
     final farmAcceptances = await getFarmAcceptances();
     
-    // Return waste items that are pending or partially accepted
     return wasteData.where((item) {
       final status = item['status'] ?? 'pending';
       final wasteId = item['timestamp'];
@@ -125,5 +120,11 @@ class NotificationService {
     await prefs.remove(_farmAcceptancesKey);
   }
 
-  Future<void> deleteCompostedRecord(String wasteId) async {}
+  Future<void> deleteCompostedRecord(String wasteId) async {
+    final prefs = await SharedPreferences.getInstance();
+    final wasteData = await getWasteManagementData();
+    
+    final updatedData = wasteData.where((item) => item['timestamp'] != wasteId).toList();
+    await prefs.setString(_wasteManagementDataKey, jsonEncode(updatedData));
+  }
 }

@@ -15,6 +15,9 @@ class DatabaseService {
         ...data,
         'id': newEntryRef.key,
         'createdAt': DateTime.now().toIso8601String(),
+        'status': data['status'] ?? 'pending',
+        'totalAccepted': data['totalAccepted'] ?? 0.0,
+        'remainingWaste': data['remainingWaste'] ?? data['predictedWaste'] ?? 0.0,
       });
       print('Data saved successfully with ID: ${newEntryRef.key}');
     } catch (e) {
@@ -36,8 +39,18 @@ class DatabaseService {
           
           data.forEach((key, value) {
             if (value is Map) {
-              result.add(Map<String, dynamic>.from(value));
+              result.add({
+                ...Map<String, dynamic>.from(value),
+                'id': key, // Add the Firebase ID
+              });
             }
+          });
+          
+          // Sort by timestamp descending (newest first)
+          result.sort((a, b) {
+            final aTime = DateTime.parse(a['timestamp'] ?? a['createdAt'] ?? '2000-01-01');
+            final bTime = DateTime.parse(b['timestamp'] ?? b['createdAt'] ?? '2000-01-01');
+            return bTime.compareTo(aTime);
           });
           
           return result;
@@ -58,12 +71,37 @@ class DatabaseService {
       if (snapshot.exists) {
         final data = snapshot.value;
         if (data is Map) {
-          return Map<String, dynamic>.from(data);
+          return {
+            ...Map<String, dynamic>.from(data),
+            'id': id,
+          };
         }
       }
       return null;
     } catch (e) {
       print('Error getting data by ID: $e');
+      rethrow;
+    }
+  }
+
+  // Update waste status in Firebase
+  static Future<void> updateWasteStatus(String id, Map<String, dynamic> updates) async {
+    try {
+      await _databaseRef.child('harvest_data').child(id).update(updates);
+      print('Data updated successfully for ID: $id');
+    } catch (e) {
+      print('Error updating data: $e');
+      rethrow;
+    }
+  }
+
+  // Delete waste record from Firebase
+  static Future<void> deleteWasteRecord(String id) async {
+    try {
+      await _databaseRef.child('harvest_data').child(id).remove();
+      print('Data deleted successfully for ID: $id');
+    } catch (e) {
+      print('Error deleting data: $e');
       rethrow;
     }
   }

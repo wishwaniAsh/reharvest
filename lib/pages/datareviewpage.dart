@@ -231,6 +231,9 @@ class _ReviewPageState extends State<ReviewPage> {
                               'dateTime': dateTimeController.text,
                               'predictedWaste': predictedWaste,
                               'timestamp': DateTime.now().toIso8601String(),
+                              'status': 'pending',
+                              'totalAccepted': 0.0,
+                              'remainingWaste': predictedWaste,
                             };
 
                             // Save to database
