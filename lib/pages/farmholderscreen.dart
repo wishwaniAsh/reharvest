@@ -1,41 +1,86 @@
-import 'package:ReHarvest/services/notification_service.dart';
+import 'package:ReHarvest/services/database_service.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:uuid/uuid.dart';
 import 'top_curve_clipper.dart';
 
 class FarmHolderDashboard extends StatefulWidget {
   final String farmHolderId;
+  final String farmHolderName;
 
-  const FarmHolderDashboard({super.key, required this.farmHolderId});
+  const FarmHolderDashboard({
+    super.key, 
+    required this.farmHolderId,
+    required this.farmHolderName
+  });
 
   @override
   State<FarmHolderDashboard> createState() => _FarmHolderDashboardState();
 }
 
 class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
-  List<Map<String, dynamic>> _notifications = [];
-  final NotificationService _notificationService = NotificationService();
+  List<Map<String, dynamic>> _availableWaste = [];
+  List<Map<String, dynamic>> _acceptedWaste = [];
   bool _isLoading = true;
-  final String _farmHolderId = Uuid().v4(); // Unique ID for this farm holder
+  int _selectedTabIndex = 0; // 0 for available, 1 for accepted
 
   @override
   void initState() {
     super.initState();
-    _loadNotifications();
+    _loadWasteData();
   }
 
-  Future<void> _loadNotifications() async {
+  Future<void> _loadWasteData() async {
     setState(() => _isLoading = true);
-    final notifications = await _notificationService.getFarmHolderNotifications();
-    setState(() {
-      _notifications = notifications;
-      _isLoading = false;
-    });
+    
+    try {
+      final available = await DatabaseService.getAvailableWasteForFarmHolders();
+      final accepted = await DatabaseService.getAcceptedWasteForFarmHolder(widget.farmHolderId);
+      
+      setState(() {
+        _availableWaste = available;
+        _acceptedWaste = accepted;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading waste data: $e');
+      setState(() => _isLoading = false);
+      
+      // Show error message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading data. Please check your internet connection.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
-  int get _unreadCount {
-    return _notifications.length;
+  Future<void> _acceptWaste(Map<String, dynamic> wasteItem, double amount) async {
+    try {
+      await DatabaseService.recordFarmAcceptance(
+        wasteItem['id'],
+        widget.farmHolderId,
+        widget.farmHolderName,
+        amount
+      );
+      
+      // Reload data
+      await _loadWasteData();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Successfully accepted ${amount.toStringAsFixed(1)}kg of waste'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error accepting waste: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -54,7 +99,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
               alignment: Alignment.center,
               padding: const EdgeInsets.only(top: 40),
               child: Text(
-                'Hello, Farm Holder',
+                'Hello, ${widget.farmHolderName}',
                 style: GoogleFonts.montserrat(
                   fontSize: 23,
                   fontWeight: FontWeight.bold,
@@ -76,194 +121,163 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
             ),
           ),
 
-          // Notification badge
-          Positioned(
-            top: 40,
-            right: 20,
-            child: _unreadCount > 0
-                ? Badge(
-                    label: Text(
-                      _unreadCount > 9 ? '9+' : _unreadCount.toString(),
-                      style: GoogleFonts.montserrat(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    backgroundColor: Colors.red,
-                    child: IconButton(
-                      icon: const Icon(Icons.notifications, color: Colors.black, size: 28),
-                      onPressed: _showNotifications,
-                    ),
-                  )
-                : IconButton(
-                    icon: const Icon(Icons.notifications, color: Colors.black, size: 28),
-                    onPressed: _showNotifications,
-                  ),
-          ),
-
           // Main content
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 160, 24, 24),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Logo
-                    Image.asset(
-                      'assets/images/reharvest_logo.png',
-                      height: 180,
-                    ),
-                    const SizedBox(height: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Logo
+                  Image.asset(
+                    'assets/images/reharvest_logo.png',
+                    height: 150,
+                  ),
+                  const SizedBox(height: 20),
 
-                    // Welcome message
-                    Text(
-                      'We appreciate your contribution in\ncaring for animals with reharvested food.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.montserrat(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black87,
-                      ),
+                  // Tab selection
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 20),
-
-                    // Loading indicator or stats
-                    if (_isLoading)
-                      const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF4A3B2A),
-                        ),
-                      )
-                    else
-                      Column(
-                        children: [
-                          // Quick stats card
-                          Card(
-                            color: const Color(0xFF4A3B2A),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            elevation: 4,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'Available Waste',
-                                    style: GoogleFonts.montserrat(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                    children: [
-                                      _buildStatItem(
-                                        'Available',
-                                        _notifications.length.toString(),
-                                        Icons.local_shipping,
-                                      ),
-                                      _buildStatItem(
-                                        'Total Waste',
-                                        '${_calculateTotalWaste().toStringAsFixed(1)}kg',
-                                        Icons.warning,
-                                        color: Colors.orange,
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedTabIndex = 0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _selectedTabIndex == 0 
+                                    ? const Color(0xFF4A3B2A) 
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'Available Waste',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.montserrat(
+                                  color: _selectedTabIndex == 0 
+                                      ? Colors.white 
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                           ),
-                          const SizedBox(height: 20),
-
-                          // Available waste deliveries
-                          if (_notifications.isNotEmpty)
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Available Waste Deliveries',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.black,
-                                  ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedTabIndex = 1),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: _selectedTabIndex == 1 
+                                    ? const Color(0xFF4A3B2A) 
+                                    : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                'My Accepted Waste',
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.montserrat(
+                                  color: _selectedTabIndex == 1 
+                                      ? Colors.white 
+                                      : Colors.black,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                const SizedBox(height: 12),
-                                ..._notifications.map((notification) => 
-                                  _buildDeliveryPreview(notification)
-                                ).toList(),
-                              ],
-                            )
-                          else
-                            Column(
-                              children: [
-                                const SizedBox(height: 20),
-                                Icon(
-                                  Icons.inbox,
-                                  size: 64,
-                                  color: Colors.grey[400],
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No waste available',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                Text(
-                                  'New waste deliveries will appear here',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Stats card
+                  Card(
+                    color: const Color(0xFF4A3B2A),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Text(
+                            _selectedTabIndex == 0 
+                                ? 'Available Waste Summary' 
+                                : 'My Accepted Waste',
+                            style: GoogleFonts.montserrat(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildStatItem(
+                                _selectedTabIndex == 0 
+                                    ? 'Available' 
+                                    : 'Accepted',
+                                _selectedTabIndex == 0 
+                                    ? _availableWaste.length.toString() 
+                                    : _acceptedWaste.length.toString(),
+                                Icons.list,
+                              ),
+                              _buildStatItem(
+                                'Total Quantity',
+                                '${_calculateTotalQuantity().toStringAsFixed(1)}kg',
+                                Icons.scale,
+                                color: Colors.orange,
+                              ),
+                            ],
+                          ),
                         ],
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
-                    const SizedBox(height: 20),
+                  // Waste list
+                  Expanded(
+                    child: _isLoading
+                        ? const Center(
+                            child: CircularProgressIndicator(
+                              color: Color(0xFF4A3B2A),
+                            ),
+                          )
+                        : _selectedTabIndex == 0
+                            ? _buildAvailableWasteList()
+                            : _buildAcceptedWasteList(),
+                  ),
 
-                    // View accepted waste button
-                    ElevatedButton(
-                      onPressed: _showAcceptedWaste,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4A3B2A),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'View My Accepted Waste',
-                        style: GoogleFonts.montserrat(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  const SizedBox(height: 20),
+
+                  // Refresh button
+                  ElevatedButton(
+                    onPressed: _loadWasteData,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFBFBF6E),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-
-                    const SizedBox(height: 20),
-
-                    // Motivational tagline
-                    Text(
-                      '"Turning waste into care for your animals."',
-                      textAlign: TextAlign.center,
+                    child: Text(
+                      'Refresh',
                       style: GoogleFonts.montserrat(
-                        fontSize: 14,
-                        fontStyle: FontStyle.italic,
-                        color: Colors.brown.shade700,
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -272,45 +286,92 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
     );
   }
 
-  double _calculateTotalWaste() {
-    return _notifications.fold(0.0, (sum, item) {
-      final waste = item['predictedWaste'] ?? 0;
-      return sum + (waste is double ? waste : double.parse(waste.toString()));
-    });
-  }
-
   Widget _buildStatItem(String label, String value, IconData icon, {Color? color}) {
     return Column(
       children: [
-        Icon(icon, color: color ?? Colors.white, size: 24),
+        Icon(icon, color: color ?? Colors.white, size: 20),
         const SizedBox(height: 4),
         Text(
           value,
           style: GoogleFonts.montserrat(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 16,
+            fontSize: 14,
           ),
         ),
         Text(
           label,
           style: GoogleFonts.montserrat(
             color: Colors.white70,
-            fontSize: 12,
+            fontSize: 10,
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );
   }
 
-  Widget _buildDeliveryPreview(Map<String, dynamic> notification) {
-    final vegetable = notification['vegetable'] ?? 'Unknown';
-    final truckId = notification['truckId'] ?? 'N/A';
-    final quantity = notification['quantity'] ?? '0';
-    final predictedWaste = notification['predictedWaste'] ?? 0;
-    final totalAccepted = notification['totalAccepted'] ?? 0;
-    final remainingWaste = notification['remainingWaste'] ?? predictedWaste;
-    final dateTime = notification['dateTime'] ?? '';
+  double _calculateTotalQuantity() {
+    if (_selectedTabIndex == 0) {
+      return _availableWaste.fold(0.0, (sum, item) {
+        final waste = item['remainingWaste'] ?? item['predictedWaste'] ?? 0;
+        return sum + (waste is double ? waste : double.parse(waste.toString()));
+      });
+    } else {
+      return _acceptedWaste.fold(0.0, (sum, item) {
+        final waste = item['acceptedAmount'] ?? 0;
+        return sum + (waste is double ? waste : double.parse(waste.toString()));
+      });
+    }
+  }
+
+  Widget _buildAvailableWasteList() {
+    return _availableWaste.isEmpty
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.inbox,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No available waste',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  'New waste deliveries will appear here',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          )
+        : ListView.builder(
+            itemCount: _availableWaste.length,
+            itemBuilder: (context, index) {
+              final wasteItem = _availableWaste[index];
+              return _buildAvailableWasteItem(wasteItem);
+            },
+          );
+  }
+
+  Widget _buildAvailableWasteItem(Map<String, dynamic> wasteItem) {
+    final vegetable = wasteItem['vegetable'] ?? 'Unknown';
+    final truckId = wasteItem['truckId'] ?? 'N/A';
+    final quantity = wasteItem['quantity'] ?? '0';
+    final predictedWaste = wasteItem['predictedWaste'] ?? 0;
+    final totalAccepted = wasteItem['totalAccepted'] ?? 0;
+    final remainingWaste = wasteItem['remainingWaste'] ?? predictedWaste;
+    final dateTime = wasteItem['dateTime'] ?? '';
+    final status = wasteItem['status'] ?? 'pending';
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -318,285 +379,230 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      child: ListTile(
-        leading: Icon(
-          Icons.local_shipping,
-          color: const Color(0xFF4A3B2A),
-          size: 32,
-        ),
-        title: Text(
-          '$vegetable Delivery',
-          style: GoogleFonts.montserrat(
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '$vegetable • Truck $truckId',
+                  style: GoogleFonts.montserrat(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: status == 'pending' ? Colors.orange : Colors.blue,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    status == 'pending' ? 'New' : 'Partially Accepted',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(
-              'Truck $truckId • $quantity kg',
+              'Delivered: $dateTime',
               style: GoogleFonts.montserrat(
                 fontSize: 12,
                 color: Colors.black87,
               ),
             ),
-            if (predictedWaste > 0)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Available waste: ${remainingWaste.toStringAsFixed(1)}kg',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 11,
-                      color: Colors.green,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  if (totalAccepted > 0)
-                    Text(
-                      'Already accepted by others: ${totalAccepted.toStringAsFixed(1)}kg',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 10,
-                        color: Colors.grey,
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total Quantity: $quantity kg',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12,
+                          color: Colors.black87,
+                        ),
                       ),
-                    ),
-                ],
+                      Text(
+                        'Predicted Waste: ${predictedWaste.toStringAsFixed(1)}kg',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Already Accepted: ${totalAccepted.toStringAsFixed(1)}kg',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      Text(
+                        'Available: ${remainingWaste.toStringAsFixed(1)}kg',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 12,
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => _showAcceptDialog(wasteItem, remainingWaste),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF4A3B2A),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: Text(
+                  'Accept Waste',
+                  style: GoogleFonts.montserrat(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                ),
               ),
+            ),
           ],
         ),
-        trailing: IconButton(
-          icon: const Icon(Icons.add_circle, color: Colors.green),
-          onPressed: () => _showAcceptDialog(notification),
-        ),
       ),
     );
   }
 
-  void _showNotifications() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => NotificationList(
-        notifications: _notifications,
-        onAcceptWaste: (notification, amount) async {
-          await _notificationService.acceptWaste(
-            notification['timestamp'],
-            _farmHolderId,
-            amount,
+  Widget _buildAcceptedWasteList() {
+    return _acceptedWaste.isEmpty
+        ? Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.inbox,
+                  size: 64,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No accepted waste yet',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 16,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                Text(
+                  'Accepted waste will appear here',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                ),
+              ],
+            ),
+          )
+        : ListView.builder(
+            itemCount: _acceptedWaste.length,
+            itemBuilder: (context, index) {
+              final acceptance = _acceptedWaste[index];
+              return _buildAcceptedWasteItem(acceptance);
+            },
           );
-          await _loadNotifications();
-          Navigator.pop(context);
-        },
-        onRefresh: _loadNotifications,
-      ),
-    );
   }
 
-  void _showAcceptDialog(Map<String, dynamic> notification) {
-    final predictedWaste = notification['predictedWaste'] ?? 0;
-    final remainingWaste = notification['remainingWaste'] ?? predictedWaste;
-    final quantityController = TextEditingController();
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(
-          'Accept Waste',
-          style: GoogleFonts.montserrat(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+  Widget _buildAcceptedWasteItem(Map<String, dynamic> acceptance) {
+    final acceptedAmount = acceptance['acceptedAmount'] ?? 0;
+    final timestamp = acceptance['timestamp'] ?? '';
+    final wasteId = acceptance['wasteId'] ?? '';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      color: const Color(0xFFE8F5E8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Available: ${remainingWaste.toStringAsFixed(1)}kg\nHow much can you accept?',
-              style: GoogleFonts.montserrat(),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: quantityController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                labelText: 'Quantity (kg)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              'Waste Acceptance',
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
               ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Accepted: ${_formatDate(timestamp)}',
+              style: GoogleFonts.montserrat(
+                fontSize: 12,
+                color: Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Amount: ${acceptedAmount.toStringAsFixed(1)}kg',
+              style: GoogleFonts.montserrat(
+                fontSize: 14,
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            FutureBuilder(
+              future: DatabaseService.getDataById(wasteId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return CircularProgressIndicator(color: Color(0xFF4A3B2A));
+                }
+                
+                if (snapshot.hasData && snapshot.data != null) {
+                  final wasteData = snapshot.data!;
+                  final vegetable = wasteData['vegetable'] ?? 'Unknown';
+                  final truckId = wasteData['truckId'] ?? 'N/A';
+                  
+                  return Text(
+                    'From: $vegetable • Truck $truckId',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 12,
+                      color: Colors.black87,
+                    ),
+                  );
+                }
+                
+                return SizedBox.shrink();
+              },
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: GoogleFonts.montserrat()),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final amount = double.tryParse(quantityController.text) ?? 0;
-              if (amount > 0 && amount <= remainingWaste) {
-                await _notificationService.acceptWaste(
-                  notification['timestamp'],
-                  _farmHolderId,
-                  amount,
-                );
-                await _loadNotifications();
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Successfully accepted ${amount.toStringAsFixed(1)}kg of waste'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Please enter a valid amount between 0 and ${remainingWaste.toStringAsFixed(1)} kg'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF4A3B2A),
-            ),
-            child: Text('Accept', style: GoogleFonts.montserrat(color: Colors.white)),
-          ),
-        ],
       ),
     );
   }
 
-  void _showAcceptedWaste() async {
-    final farmAcceptances = await _notificationService.getFarmAcceptances();
-    
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => AcceptedWasteSheet(
-        acceptances: farmAcceptances,
-      ),
-    );
-  }
-}
-
-// ============ Notification List ============
-class NotificationList extends StatelessWidget {
-  final List<Map<String, dynamic>> notifications;
-  final Function(Map<String, dynamic>, double) onAcceptWaste;
-  final VoidCallback onRefresh;
-
-  const NotificationList({
-    super.key,
-    required this.notifications,
-    required this.onAcceptWaste,
-    required this.onRefresh,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Available Waste',
-                style: GoogleFonts.montserrat(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: onRefresh,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: notifications.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.notifications_none,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No waste available',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: notifications.length,
-                    itemBuilder: (context, index) {
-                      final notification = notifications[index];
-                      final predictedWaste = notification['predictedWaste'] ?? 0;
-                      final remainingWaste = notification['remainingWaste'] ?? predictedWaste;
-                      
-                      return ListTile(
-                        leading: Icon(
-                          Icons.local_shipping,
-                          color: const Color(0xFF4A3B2A),
-                        ),
-                        title: Text(
-                          '${notification['vegetable']} Delivery',
-                          style: GoogleFonts.montserrat(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'Truck ${notification['truckId']} • Available: ${remainingWaste.toStringAsFixed(1)}kg',
-                          style: GoogleFonts.montserrat(),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.add_circle, color: Colors.green),
-                          onPressed: () => _showAcceptDialog(context, notification, remainingWaste),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAcceptDialog(BuildContext context, Map<String, dynamic> notification, double remainingWaste) {
+  void _showAcceptDialog(Map<String, dynamic> wasteItem, double remainingWaste) {
     final quantityController = TextEditingController();
     
     showDialog(
@@ -637,12 +643,13 @@ class NotificationList extends StatelessWidget {
             onPressed: () {
               final amount = double.tryParse(quantityController.text) ?? 0;
               if (amount > 0 && amount <= remainingWaste) {
-                onAcceptWaste(notification, amount);
+                _acceptWaste(wasteItem, amount);
                 Navigator.pop(context);
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text('Please enter a valid amount between 0 and ${remainingWaste.toStringAsFixed(1)} kg'),
+                    backgroundColor: Colors.red,
                   ),
                 );
               }
@@ -656,118 +663,13 @@ class NotificationList extends StatelessWidget {
       ),
     );
   }
-}
 
-// ============ Accepted Waste Sheet ============
-class AcceptedWasteSheet extends StatelessWidget {
-  final Map<String, dynamic> acceptances;
-
-  const AcceptedWasteSheet({super.key, required this.acceptances});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20),
-          topRight: Radius.circular(20),
-        ),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          
-          Text(
-            'My Accepted Waste',
-            style: GoogleFonts.montserrat(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          Expanded(
-            child: acceptances.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.inbox,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No accepted waste yet',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 16,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: acceptances.length,
-                    itemBuilder: (context, index) {
-                      final wasteId = acceptances.keys.elementAt(index);
-                      final acceptance = acceptances[wasteId];
-                      final wasteData = acceptance['wasteData'];
-                      final acceptedAmount = acceptance['acceptedAmount'] ?? 0;
-                      
-                      return ListTile(
-                        leading: const Icon(Icons.check_circle, color: Colors.green),
-                        title: Text(
-                          '${wasteData['vegetable']} • Truck ${wasteData['truckId']}',
-                          style: GoogleFonts.montserrat(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        subtitle: Text(
-                          'Accepted: ${acceptedAmount.toStringAsFixed(1)}kg',
-                          style: GoogleFonts.montserrat(),
-                        ),
-                        trailing: Text(
-                          _formatDate(wasteData['dateTime'] ?? ''),
-                          style: GoogleFonts.montserrat(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(String dateTime) {
+  String _formatDate(String timestamp) {
     try {
-      final parts = dateTime.split(' ');
-      if (parts.isNotEmpty) {
-        return parts[0];
-      }
+      final date = DateTime.parse(timestamp);
+      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
     } catch (e) {
-      debugPrint("Error formatting date: $e");
+      return timestamp;
     }
-    return dateTime;
   }
 }

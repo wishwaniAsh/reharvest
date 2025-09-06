@@ -1,5 +1,7 @@
 import 'package:ReHarvest/services/database_service.dart';
 import 'package:ReHarvest/services/notification_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'top_curve_clipper.dart';
@@ -135,6 +137,121 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  // NEW: Method to show farm acceptances
+  Future<void> _showFarmAcceptances(String wasteId) async {
+    try {
+      // Get farm acceptances from database
+      final DatabaseReference databaseRef = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL: 'https://reharvest-efbda-default-rtdb.asia-southeast1.firebasedatabase.app',
+      ).ref();
+      
+      final snapshot = await databaseRef
+          .child('farm_acceptances')
+          .orderByChild('wasteId')
+          .equalTo(wasteId)
+          .get();
+      
+      if (snapshot.exists) {
+        final data = snapshot.value;
+        List<Map<String, dynamic>> acceptances = [];
+        
+        if (data is Map) {
+          data.forEach((key, value) {
+            if (value is Map) {
+              acceptances.add(Map<String, dynamic>.from(value));
+            }
+          });
+        }
+        
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(
+              'Farm Acceptances',
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: acceptances.isEmpty
+                  ? Text('No farm acceptances yet', style: GoogleFonts.montserrat())
+                  : ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: acceptances.length,
+                      itemBuilder: (context, index) {
+                        final acceptance = acceptances[index];
+                        return ListTile(
+                          title: Text(
+                            acceptance['farmHolderName'] ?? 'Unknown Farm',
+                            style: GoogleFonts.montserrat(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Accepted: ${acceptance['acceptedAmount']?.toStringAsFixed(1)}kg',
+                            style: GoogleFonts.montserrat(),
+                          ),
+                          trailing: Text(
+                            _formatTimestamp(acceptance['timestamp'] ?? ''),
+                            style: GoogleFonts.montserrat(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Close', style: GoogleFonts.montserrat()),
+              ),
+            ],
+          ),
+        );
+      } else {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text(
+              'Farm Acceptances',
+              style: GoogleFonts.montserrat(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text('No farm acceptances yet', style: GoogleFonts.montserrat()),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Close', style: GoogleFonts.montserrat()),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error loading farm acceptances: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading farm acceptances: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  String _formatTimestamp(String timestamp) {
+    try {
+      final date = DateTime.parse(timestamp);
+      return '${date.day}/${date.month}/${date.year} ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return timestamp;
     }
   }
 
@@ -517,6 +634,13 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // NEW: Farm acceptances button
+            if (status != 'pending')
+              IconButton(
+                icon: const Icon(Icons.people, color: Colors.blue, size: 24),
+                onPressed: () => _showFarmAcceptances(wasteId),
+                tooltip: 'View farm acceptances',
+              ),
             if (status != 'composted' && remainingWaste > 0)
               IconButton(
                 icon: const Icon(Icons.recycling, color: Colors.green, size: 24),
@@ -976,16 +1100,16 @@ class WasteAnalysisSheet extends StatelessWidget {
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 12,
+            ),
           ),
-        ),
-        Text(
-          label,
-          style: GoogleFonts.montserrat(
-            color: Colors.white70,
-            fontSize: 10,
+          Text(
+            label,
+            style: GoogleFonts.montserrat(
+              color: Colors.white70,
+              fontSize: 10,
+            ),
           ),
-        ),
-      ],
-    );
+        ],
+      );
+    }
   }
-}
