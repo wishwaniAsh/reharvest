@@ -190,4 +190,26 @@ class AuthService {
       rethrow;
     }
   }
+
+  // Add this method to your AuthService class
+Future<void> sendPasswordResetEmail(String email) async {
+  try {
+    await _auth.sendPasswordResetEmail(email: email);
+    print('Password reset email sent to $email');
+  } on FirebaseAuthException catch (e) {
+    print('Firebase Auth Error: ${e.code} - ${e.message}');
+    
+    // Handle specific error cases
+    if (e.code == 'user-not-found') {
+      throw Exception('No user found with this email address');
+    } else if (e.code == 'invalid-email') {
+      throw Exception('The email address is not valid');
+    } else {
+      throw Exception('Failed to send password reset email: ${e.message}');
+    }
+  } catch (e) {
+    print('Error sending password reset email: $e');
+    throw Exception('Failed to send password reset email');
+  }
+}
 }
