@@ -3,8 +3,8 @@ import 'package:http/http.dart' as http;
 
 class PredictionService {
   // Use 10.0.2.2 instead of 127.0.0.1 for Android emulator
-  // final String baseUrl = "http://10.0.2.2:8000";
-  final String baseUrl = "http://192.168.8.195:8000"; //ipconfig replace IPv4 Address
+   final String baseUrl = "http://192.168.136.27:8000";
+  // final String baseUrl = "http://192.168.8.195:8000"; //ipconfig replace IPv4 Address
 
 
   Future<double> getPrediction(String vegetable, String month, double qty) async {

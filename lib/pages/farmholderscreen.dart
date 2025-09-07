@@ -156,15 +156,15 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
 
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(24, 160, 24, 24),
+              padding: const EdgeInsets.fromLTRB(16, 120, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Image.asset(
                     'assets/images/reharvest_logo.png',
-                    height: 150,
+                    height: 120,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   Container(
                     decoration: BoxDecoration(
@@ -192,6 +192,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                                       ? Colors.white 
                                       : Colors.black,
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 12,
                                 ),
                               ),
                             ),
@@ -216,6 +217,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                                       ? Colors.white 
                                       : Colors.black,
                                   fontWeight: FontWeight.bold,
+                                  fontSize: 12,
                                 ),
                               ),
                             ),
@@ -224,7 +226,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   Card(
                     color: const Color(0xFF4A3B2A),
@@ -233,7 +235,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                     ),
                     elevation: 4,
                     child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: const EdgeInsets.all(12.0),
                       child: Column(
                         children: [
                           Text(
@@ -243,19 +245,17 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                             style: GoogleFonts.montserrat(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
-                              fontSize: 16,
+                              fontSize: 14,
                             ),
                           ),
-                          const SizedBox(height: 12),
+                          const SizedBox(height: 8),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               _buildStatItem(
-                                _selectedTabIndex == 0 
-                                    ? 'Available' 
-                                    : 'Accepted',
-                                _selectedTabIndex == 0 
-                                    ? _availableWaste.length.toString() 
+                                _selectedTabIndex == 0 ? 'Available' : 'Accepted',
+                                _selectedTabIndex == 0
+                                    ? _availableWaste.length.toString()
                                     : _acceptedWaste.length.toString(),
                                 Icons.list,
                               ),
@@ -271,7 +271,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   Expanded(
                     child: _isLoading
@@ -285,7 +285,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                             : _buildAcceptedWasteList(),
                   ),
 
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
 
                   ElevatedButton(
                     onPressed: _loadWasteData,
@@ -315,6 +315,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
 
   Widget _buildStatItem(String label, String value, IconData icon, {Color? color}) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, color: color ?? Colors.white, size: 20),
         const SizedBox(height: 4),
@@ -323,7 +324,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
           style: GoogleFonts.montserrat(
             color: Colors.white,
             fontWeight: FontWeight.bold,
-            fontSize: 14,
+            fontSize: 12,
           ),
         ),
         Text(
@@ -360,23 +361,24 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
               children: [
                 Icon(
                   Icons.inbox,
-                  size: 64,
+                  size: 48,
                   color: Colors.grey[400],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   'No available waste',
                   style: GoogleFonts.montserrat(
-                    fontSize: 16,
+                    fontSize: 14,
                     color: Colors.grey[600],
                   ),
                 ),
                 Text(
                   'New waste deliveries will appear here',
                   style: GoogleFonts.montserrat(
-                    fontSize: 14,
+                    fontSize: 12,
                     color: Colors.grey[500],
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -407,31 +409,36 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header row with title and status
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '$vegetable • Truck $truckId',
-                  style: GoogleFonts.montserrat(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                Expanded(
+                  child: Text(
+                    '$vegetable • Truck $truckId',
+                    style: GoogleFonts.montserrat(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                      fontSize: 14,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                   decoration: BoxDecoration(
                     color: status == 'pending' ? Colors.orange : Colors.blue,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
                     status == 'pending' ? 'New' : 'Partially Accepted',
                     style: GoogleFonts.montserrat(
                       color: Colors.white,
-                      fontSize: 10,
+                      fontSize: 9,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -439,62 +446,58 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
               ],
             ),
             const SizedBox(height: 8),
+            
+            // Delivery date
             Text(
               'Delivered: $dateTime',
               style: GoogleFonts.montserrat(
-                fontSize: 12,
+                fontSize: 11,
                 color: Colors.black87,
               ),
             ),
             const SizedBox(height: 8),
-            Row(
+            
+            // Waste metrics in a column to prevent overflow
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Total Quantity: $quantity kg',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 12,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      Text(
-                        'Predicted Waste: ${predictedWaste.toStringAsFixed(1)}kg',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 12,
-                          color: Colors.black87,
-                        ),
-                      ),
-                    ],
+                Text(
+                  'Total Quantity: $quantity kg',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 11,
+                    color: Colors.black87,
                   ),
                 ),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Already Accepted: ${totalAccepted.toStringAsFixed(1)}kg',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                      Text(
-                        'Available: ${remainingWaste.toStringAsFixed(1)}kg',
-                        style: GoogleFonts.montserrat(
-                          fontSize: 12,
-                          color: Colors.green,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 4),
+                Text(
+                  'Predicted Waste: ${predictedWaste.toStringAsFixed(1)}kg',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 11,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Already Accepted: ${totalAccepted.toStringAsFixed(1)}kg',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 11,
+                    color: Colors.grey,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Available: ${remainingWaste.toStringAsFixed(1)}kg',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 11,
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
+            
+            // Accept button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -504,12 +507,13 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                 ),
                 child: Text(
                   'Accept Waste',
                   style: GoogleFonts.montserrat(
                     color: Colors.white,
-                    fontSize: 14,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -528,23 +532,24 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
               children: [
                 Icon(
                   Icons.inbox,
-                  size: 64,
+                  size: 48,
                   color: Colors.grey[400],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   'No accepted waste yet',
                   style: GoogleFonts.montserrat(
-                    fontSize: 16,
+                    fontSize: 14,
                     color: Colors.grey[600],
                   ),
                 ),
                 Text(
                   'Accepted waste will appear here',
                   style: GoogleFonts.montserrat(
-                    fontSize: 14,
+                    fontSize: 12,
                     color: Colors.grey[500],
                   ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
@@ -570,7 +575,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -579,13 +584,14 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
               style: GoogleFonts.montserrat(
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
+                fontSize: 14,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Accepted: ${_formatDate(timestamp)}',
               style: GoogleFonts.montserrat(
-                fontSize: 12,
+                fontSize: 11,
                 color: Colors.black87,
               ),
             ),
@@ -593,7 +599,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
             Text(
               'Amount: ${acceptedAmount.toStringAsFixed(1)}kg',
               style: GoogleFonts.montserrat(
-                fontSize: 14,
+                fontSize: 12,
                 color: Colors.green,
                 fontWeight: FontWeight.bold,
               ),
@@ -603,7 +609,7 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
               future: DatabaseService.getDataById(wasteId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return CircularProgressIndicator(color: Color(0xFF4A3B2A));
+                  return const CircularProgressIndicator(color: Color(0xFF4A3B2A));
                 }
                 
                 if (snapshot.hasData && snapshot.data != null) {
@@ -614,13 +620,13 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                   return Text(
                     'From: $vegetable • Truck $truckId',
                     style: GoogleFonts.montserrat(
-                      fontSize: 12,
+                      fontSize: 11,
                       color: Colors.black87,
                     ),
                   );
                 }
                 
-                return SizedBox.shrink();
+                return const SizedBox.shrink();
               },
             ),
           ],

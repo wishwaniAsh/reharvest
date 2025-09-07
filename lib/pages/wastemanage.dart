@@ -582,22 +582,51 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),
-      child: ListTile(
-        leading: Icon(
-          Icons.local_shipping,
-          color: Colors.white,
-          size: 32,
-        ),
-        title: Text(
-          '$vegetable • Truck $truckId',
-          style: GoogleFonts.montserrat(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // First row: Title and status
+            Row(
+              children: [
+                Icon(
+                  Icons.local_shipping,
+                  color: Colors.white,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '$vegetable • Truck $truckId',
+                    style: GoogleFonts.montserrat(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(statusIcon, color: statusColor, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      statusText,
+                      style: GoogleFonts.montserrat(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            
+            // Second row: Delivery info
             Text(
               '$quantity kg delivered • ${_formatDate(dateTime)}',
               style: GoogleFonts.montserrat(
@@ -605,59 +634,74 @@ class _WasteManagementPageState extends State<WasteManagementPage> {
                 fontSize: 12,
               ),
             ),
-            const SizedBox(height: 4),
-            Row(
+            const SizedBox(height: 8),
+            
+            // Third row: Waste metrics
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
               children: [
-                Icon(statusIcon, color: statusColor, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  statusText,
-                  style: GoogleFonts.montserrat(
-                    color: statusColor,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+                _buildWasteMetric('Predicted: ${predictedWaste.toStringAsFixed(1)}kg'),
+                _buildWasteMetric('Accepted: ${totalAccepted.toStringAsFixed(1)}kg'),
+                _buildWasteMetric('Remaining: ${remainingWaste.toStringAsFixed(1)}kg'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            
+            // Fourth row: Action buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                // Farm acceptances button
+                if (status != 'pending')
+                  IconButton(
+                    icon: const Icon(Icons.people, color: Colors.blue, size: 20),
+                    onPressed: () => _showFarmAcceptances(wasteId),
+                    tooltip: 'View farm acceptances',
                   ),
+                
+                // Compost button
+                if (status != 'composted' && remainingWaste > 0)
+                  IconButton(
+                    icon: const Icon(Icons.recycling, color: Colors.green, size: 20),
+                    onPressed: () => _showCompostConfirmation(wasteId),
+                    tooltip: 'Send to compost',
+                  ),
+                
+                // Delete button
+                if (status == 'composted')
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                    onPressed: () => _showDeleteConfirmation(wasteId),
+                    tooltip: 'Delete composted record',
+                  ),
+                
+                // Info button
+                IconButton(
+                  icon: const Icon(Icons.info_outline, color: Colors.white, size: 20),
+                  onPressed: () => _showItemDetails(item),
+                  tooltip: 'Details',
                 ),
               ],
             ),
-            Text(
-              'Predicted: ${predictedWaste.toStringAsFixed(1)}kg • '
-              'Accepted: ${totalAccepted.toStringAsFixed(1)}kg • '
-              'Remaining: ${remainingWaste.toStringAsFixed(1)}kg',
-              style: GoogleFonts.montserrat(
-                color: Colors.white70,
-                fontSize: 11,
-              ),
-            ),
           ],
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // NEW: Farm acceptances button
-            if (status != 'pending')
-              IconButton(
-                icon: const Icon(Icons.people, color: Colors.blue, size: 24),
-                onPressed: () => _showFarmAcceptances(wasteId),
-                tooltip: 'View farm acceptances',
-              ),
-            if (status != 'composted' && remainingWaste > 0)
-              IconButton(
-                icon: const Icon(Icons.recycling, color: Colors.green, size: 24),
-                onPressed: () => _showCompostConfirmation(wasteId),
-                tooltip: 'Send to compost',
-              ),
-            if (status == 'composted')
-              IconButton(
-                icon: const Icon(Icons.delete, color: Colors.red, size: 24),
-                onPressed: () => _showDeleteConfirmation(wasteId),
-                tooltip: 'Delete composted record',
-              ),
-            IconButton(
-              icon: const Icon(Icons.info_outline, color: Colors.white, size: 24),
-              onPressed: () => _showItemDetails(item),
-            ),
-          ],
+      ),
+    );
+  }
+
+  Widget _buildWasteMetric(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.montserrat(
+          color: Colors.white70,
+          fontSize: 11,
         ),
       ),
     );
@@ -900,7 +944,7 @@ class WasteItemDetailsDialog extends StatelessWidget {
             ),
           ),
         ],
-      ),
+    )
     );
   }
 
@@ -1100,16 +1144,16 @@ class WasteAnalysisSheet extends StatelessWidget {
             color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 12,
-            ),
           ),
-          Text(
-            label,
-            style: GoogleFonts.montserrat(
-              color: Colors.white70,
-              fontSize: 10,
-            ),
+        ),
+        Text(
+          label,
+          style: GoogleFonts.montserrat(
+            color: Colors.white70,
+            fontSize: 10,
           ),
-        ],
-      );
-    }
+        ),
+      ],
+    );
   }
+}

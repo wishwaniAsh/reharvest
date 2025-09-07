@@ -164,7 +164,7 @@ class _UploadDataPageState extends State<UploadDataPage> {
                       controller: quantityController,
                       keyboardType: TextInputType.number,
                       style: GoogleFonts.montserrat(color: Colors.white),
-                      decoration: _inputDecoration('Quantity in kg (Must be 150-20000kg)'),
+                      decoration: _inputDecoration('Quantity in kg (150-20000kg)'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter quantity';
