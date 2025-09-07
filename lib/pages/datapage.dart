@@ -41,7 +41,13 @@ class DataPage extends StatelessWidget {
             left: 10,
             child: IconButton(
               icon: const Icon(Icons.arrow_back, color: Colors.black),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/admin_dashboard',
+                  (Route<dynamic> route) => false,
+                );
+              },
             ),
           ),
 
