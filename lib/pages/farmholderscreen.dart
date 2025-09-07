@@ -7,11 +7,14 @@ class FarmHolderDashboard extends StatefulWidget {
   final String farmHolderId;
   final String farmHolderName;
 
-  const FarmHolderDashboard({
+   FarmHolderDashboard({
     super.key, 
     required this.farmHolderId,
     required this.farmHolderName
-  });
+  })
+  {
+    print('FarmHolderDashboard created with farmHolderId: $farmHolderId, farmHolderName: $farmHolderName');
+  }
 
   @override
   State<FarmHolderDashboard> createState() => _FarmHolderDashboardState();
@@ -21,11 +24,12 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
   List<Map<String, dynamic>> _availableWaste = [];
   List<Map<String, dynamic>> _acceptedWaste = [];
   bool _isLoading = true;
-  int _selectedTabIndex = 0; // 0 for available, 1 for accepted
+  int _selectedTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    print('FarmHolderDashboard initState with farmHolderId: ${widget.farmHolderId}');
     _loadWasteData();
   }
 
@@ -34,24 +38,55 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
     
     try {
       final available = await DatabaseService.getAvailableWasteForFarmHolders();
+      print('Loading acceptances for farm holder: ${widget.farmHolderId}');
+      
       final accepted = await DatabaseService.getAcceptedWasteForFarmHolder(widget.farmHolderId);
       
+      // Filter out waste that this specific farm holder has already accepted
+      final filteredAvailable = await _filterAlreadyAcceptedWaste(available);
+      
       setState(() {
-        _availableWaste = available;
+        _availableWaste = filteredAvailable;
         _acceptedWaste = accepted;
         _isLoading = false;
       });
+      
+      print('Loaded ${_availableWaste.length} available waste items');
+      print('Loaded ${_acceptedWaste.length} accepted waste items for farm holder ${widget.farmHolderId}');
+      
     } catch (e) {
       print('Error loading waste data: $e');
       setState(() => _isLoading = false);
       
-      // Show error message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error loading data. Please check your internet connection.'),
+          content: Text('Error loading data: $e'),
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  // Filter out waste that this specific farm holder has already accepted
+  Future<List<Map<String, dynamic>>> _filterAlreadyAcceptedWaste(List<Map<String, dynamic>> availableWaste) async {
+    try {
+      List<Map<String, dynamic>> filteredWaste = [];
+      
+      for (var waste in availableWaste) {
+        final hasAccepted = await DatabaseService.hasFarmHolderAcceptedWaste(
+          waste['id'], 
+          widget.farmHolderId
+        );
+        
+        if (!hasAccepted) {
+          filteredWaste.add(waste);
+        }
+      }
+      
+      return filteredWaste;
+    } catch (e) {
+      print('Error filtering accepted waste: $e');
+      return availableWaste;
     }
   }
 
@@ -89,7 +124,6 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
       backgroundColor: const Color(0xFFFFF3DC),
       body: Stack(
         children: [
-          // Curved header
           ClipPath(
             clipper: TopCurveClipper(),
             child: Container(
@@ -109,7 +143,6 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
             ),
           ),
 
-          // Back icon
           Positioned(
             top: 40,
             left: 10,
@@ -121,21 +154,18 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
             ),
           ),
 
-          // Main content
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(24, 160, 24, 24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo
                   Image.asset(
                     'assets/images/reharvest_logo.png',
                     height: 150,
                   ),
                   const SizedBox(height: 20),
 
-                  // Tab selection
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -196,7 +226,6 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Stats card
                   Card(
                     color: const Color(0xFF4A3B2A),
                     shape: RoundedRectangleBorder(
@@ -244,7 +273,6 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Waste list
                   Expanded(
                     child: _isLoading
                         ? const Center(
@@ -259,7 +287,6 @@ class _FarmHolderDashboardState extends State<FarmHolderDashboard> {
 
                   const SizedBox(height: 20),
 
-                  // Refresh button
                   ElevatedButton(
                     onPressed: _loadWasteData,
                     style: ElevatedButton.styleFrom(

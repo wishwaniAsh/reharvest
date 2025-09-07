@@ -114,39 +114,40 @@ class DatabaseService {
   // Get accepted waste for a specific farm holder
   static Future<List<Map<String, dynamic>>> getAcceptedWasteForFarmHolder(String farmHolderId) async {
     try {
-      final snapshot = await _databaseRef.child('farm_acceptances')
-          .orderByChild('farmHolderId')
-          .equalTo(farmHolderId)
-          .get();
+      if (farmHolderId.isEmpty) {
+        throw Exception('Farm holder ID cannot be empty');
+      }
+
+      final snapshot = await _databaseRef.child('farm_holder_acceptances').child(farmHolderId).get();
       
       if (snapshot.exists) {
         final data = snapshot.value;
+        List<Map<String, dynamic>> result = [];
         
         if (data is Map) {
-          List<Map<String, dynamic>> result = [];
-          
-          data.forEach((key, value) {
+          data.forEach((acceptanceId, value) {
             if (value is Map) {
               result.add({
                 ...Map<String, dynamic>.from(value),
-                'acceptanceId': key,
+                'acceptanceId': acceptanceId,
+                'farmHolderId': farmHolderId,
               });
             }
           });
-          
-          // Sort by timestamp descending (newest first)
-          result.sort((a, b) {
-            final aTime = DateTime.parse(a['timestamp'] ?? '2000-01-01');
-            final bTime = DateTime.parse(b['timestamp'] ?? '2000-01-01');
-            return bTime.compareTo(aTime);
-          });
-          
-          return result;
         }
+        
+        // Sort by timestamp descending (newest first)
+        result.sort((a, b) {
+          final aTime = DateTime.parse(a['timestamp'] ?? '2000-01-01');
+          final bTime = DateTime.parse(b['timestamp'] ?? '2000-01-01');
+          return bTime.compareTo(aTime);
+        });
+        
+        return result;
       }
       return [];
     } catch (e) {
-      print('Error loading accepted waste: $e');
+      print('Error loading accepted waste for farm holder $farmHolderId: $e');
       rethrow;
     }
   }
@@ -159,14 +160,29 @@ class DatabaseService {
     double acceptedAmount
   ) async {
     try {
-      // Create a new acceptance record
-      final newAcceptanceRef = _databaseRef.child('farm_acceptances').push();
-      await newAcceptanceRef.set({
+      if (farmHolderId.isEmpty) {
+        throw Exception('Farm holder ID cannot be empty');
+      }
+
+      // Create a unique acceptance ID
+      final acceptanceId = _databaseRef.child('farm_acceptances').push().key;
+      
+      // Store in main acceptances collection
+      await _databaseRef.child('farm_acceptances').child(acceptanceId!).set({
         'wasteId': wasteId,
         'farmHolderId': farmHolderId,
         'farmHolderName': farmHolderName,
         'acceptedAmount': acceptedAmount,
         'timestamp': DateTime.now().toIso8601String(),
+        'acceptanceId': acceptanceId,
+      });
+      
+      // Store under the specific farm holder's acceptances
+      await _databaseRef.child('farm_holder_acceptances').child(farmHolderId).child(acceptanceId).set({
+        'wasteId': wasteId,
+        'acceptedAmount': acceptedAmount,
+        'timestamp': DateTime.now().toIso8601String(),
+        'farmHolderName': farmHolderName,
       });
       
       // Update the waste record
@@ -192,7 +208,7 @@ class DatabaseService {
         });
       }
       
-      print('Farm acceptance recorded successfully');
+      print('Farm acceptance recorded successfully for farm holder $farmHolderId');
     } catch (e) {
       print('Error recording farm acceptance: $e');
       rethrow;
@@ -245,10 +261,7 @@ class DatabaseService {
   // Get farm acceptances for a specific waste item
   static Future<List<Map<String, dynamic>>> getFarmAcceptancesForWaste(String wasteId) async {
     try {
-      final snapshot = await _databaseRef.child('farm_acceptances')
-          .orderByChild('wasteId')
-          .equalTo(wasteId)
-          .get();
+      final snapshot = await _databaseRef.child('farm_acceptances').get();
       
       if (snapshot.exists) {
         final data = snapshot.value;
@@ -257,7 +270,10 @@ class DatabaseService {
         if (data is Map) {
           data.forEach((key, value) {
             if (value is Map) {
-              acceptances.add(Map<String, dynamic>.from(value));
+              final acceptanceData = Map<String, dynamic>.from(value);
+              if (acceptanceData['wasteId'] == wasteId) {
+                acceptances.add(acceptanceData);
+              }
             }
           });
         }
@@ -268,6 +284,36 @@ class DatabaseService {
     } catch (e) {
       print('Error loading farm acceptances: $e');
       rethrow;
+    }
+  }
+
+  // Check if a farm holder has already accepted a specific waste
+  static Future<bool> hasFarmHolderAcceptedWaste(String wasteId, String farmHolderId) async {
+    try {
+      if (farmHolderId.isEmpty) {
+        return false;
+      }
+
+      final snapshot = await _databaseRef.child('farm_holder_acceptances').child(farmHolderId).get();
+      
+      if (snapshot.exists) {
+        final data = snapshot.value;
+        
+        if (data is Map) {
+          for (var entry in data.entries) {
+            if (entry.value is Map) {
+              final acceptanceData = Map<String, dynamic>.from(entry.value as Map);
+              if (acceptanceData['wasteId'] == wasteId) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
+    } catch (e) {
+      print('Error checking if farm holder accepted waste: $e');
+      return false;
     }
   }
 }

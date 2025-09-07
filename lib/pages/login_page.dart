@@ -1,3 +1,4 @@
+import 'package:ReHarvest/pages/farmholderscreen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -264,12 +265,27 @@ class _LoginPageState extends State<LoginPage> {
         );
         break;
       case 'Farm-holder':
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/farmholderscreen',
-          (route) => false,
-        );
-        break;
+  // Get the current user from Firebase Auth
+  User? user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    // Pass the user's UID as farmHolderId
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FarmHolderDashboard(
+          farmHolderId: user.uid, // This is the critical fix
+          farmHolderName: user.displayName ?? user.email!.split('@')[0],
+        ),
+      ),
+      (route) => false,
+    );
+  } else {
+    // Handle case where user is null
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('User not authenticated')),
+    );
+  }
+  break;
       case 'Farmer':
         Navigator.pushNamedAndRemoveUntil(
           context,
