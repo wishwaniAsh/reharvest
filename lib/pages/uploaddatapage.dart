@@ -1,6 +1,7 @@
-import 'package:ReHarvest/pages/datareviewpage.dart';
+import 'package:ReHarvest/pages/admin_dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'datareviewpage.dart';
 import 'top_curve_clipper.dart';
 
 class UploadDataPage extends StatefulWidget {
@@ -23,37 +24,18 @@ class _UploadDataPageState extends State<UploadDataPage> {
     'Onion', 'Tomato', 'Cooking melons', 'Beetroot', 'Cabbage', 'Radish',
     'Carrot', 'Green beans', 'Okra', 'Garlic'
   ];
-
   String? selectedVegetable;
-  List<String> filteredVegetables = [];
 
-  @override
-  void initState() {
-    super.initState();
-    filteredVegetables = vegetables;
-  }
-
-  void filterVegetables(String query) {
-    setState(() {
-      filteredVegetables = vegetables
-          .where((veg) => veg.toLowerCase().contains(query.toLowerCase()))
-          .toList();
-    });
-  }
-
+  // --- Helpers for Date/Time ---
   Future<void> _pickDate() async {
-    DateTime now = DateTime.now();
+    final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
       initialDate: now,
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
     );
-    if (picked != null) {
-      setState(() {
-        selectedDate = picked;
-      });
-    }
+    if (picked != null) setState(() => selectedDate = picked);
   }
 
   Future<void> _pickTime() async {
@@ -61,29 +43,27 @@ class _UploadDataPageState extends State<UploadDataPage> {
       context: context,
       initialTime: TimeOfDay.now(),
     );
-    if (picked != null) {
-      setState(() {
-        selectedTime = picked;
-      });
-    }
+    if (picked != null) setState(() => selectedTime = picked);
   }
 
-  String get formattedDate {
-    if (selectedDate == null) return "Select date";
-    return "${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}";
-  }
+  String get formattedDate =>
+      selectedDate == null
+          ? "Select date"
+          : "${selectedDate!.year}-${selectedDate!.month.toString().padLeft(2, '0')}-${selectedDate!.day.toString().padLeft(2, '0')}";
 
-  String get formattedTime {
-    if (selectedTime == null) return "Select time";
-    return "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}";
-  }
+  String get formattedTime =>
+      selectedTime == null
+          ? "Select time"
+          : "${selectedTime!.hour.toString().padLeft(2, '0')}:${selectedTime!.minute.toString().padLeft(2, '0')}";
 
+  // --- Widget build ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF3DC),
       body: Stack(
         children: [
+          // Header
           ClipPath(
             clipper: TopCurveClipper(),
             child: Container(
@@ -103,6 +83,7 @@ class _UploadDataPageState extends State<UploadDataPage> {
             ),
           ),
 
+          // Back button (pop route)
           Positioned(
             top: 40,
             left: 10,
@@ -111,7 +92,9 @@ class _UploadDataPageState extends State<UploadDataPage> {
               onPressed: () => Navigator.pop(context),
             ),
           ),
+          
 
+          // Form content
           Align(
             alignment: Alignment.center,
             child: SingleChildScrollView(
@@ -121,56 +104,51 @@ class _UploadDataPageState extends State<UploadDataPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset(
-                      'assets/images/reharvest_logo.png',
-                      height: 250,
-                    ),
+                    Image.asset('assets/images/reharvest_logo.png', height: 250),
                     const SizedBox(height: 16),
 
                     _buildInputField(truckIdController, 'Truck ID'),
                     const SizedBox(height: 12),
 
-                    // Vegetable Dropdown (Autocomplete)
+                    // Vegetable Autocomplete
                     Autocomplete<String>(
-                      optionsBuilder: (TextEditingValue textEditingValue) {
-                        if (textEditingValue.text.isEmpty) {
-                          return vegetables;
-                        }
-                        return vegetables.where((String option) =>
-                            option.toLowerCase().contains(textEditingValue.text.toLowerCase()));
+                      optionsBuilder: (TextEditingValue value) {
+                        if (value.text.isEmpty) return vegetables;
+                        return vegetables.where((v) =>
+                            v.toLowerCase().contains(value.text.toLowerCase()));
                       },
                       onSelected: (String selection) {
-                        selectedVegetable = selection;
+                        setState(() {
+                          selectedVegetable = selection;
+                        });
                       },
-                      fieldViewBuilder: (BuildContext context,
-                          TextEditingController textEditingController,
-                          FocusNode focusNode,
-                          VoidCallback onFieldSubmitted) {
+                      fieldViewBuilder: (context, controller, focusNode, _) {
                         return TextFormField(
-                          controller: textEditingController,
+                          controller: controller,
                           focusNode: focusNode,
-                          decoration: _inputDecoration('Vegetable type'),
                           style: GoogleFonts.montserrat(color: Colors.white),
-                          validator: (value) =>
-                              value == null || value.isEmpty ? 'Please select a vegetable' : null,
-                          onChanged: (val) => filterVegetables(val),
+                          decoration: _inputDecoration('Vegetable type'),
+                          validator: (v) => v == null || v.isEmpty
+                              ? 'Please select a vegetable'
+                              : null,
                         );
                       },
                       optionsViewBuilder: (context, onSelected, options) {
                         return Material(
                           color: const Color(0xFFFFF3DC),
-                          elevation: 2,
                           borderRadius: BorderRadius.circular(8),
                           child: ListView.separated(
                             padding: EdgeInsets.zero,
                             shrinkWrap: true,
                             itemCount: options.length,
-                            separatorBuilder: (_, __) =>
-                                const Divider(height: 1, color: Color(0xFFBFBF6E)),
+                            separatorBuilder: (_, __) => const Divider(
+                                height: 1, color: Color(0xFFBFBF6E)),
                             itemBuilder: (context, index) {
-                              final String option = options.elementAt(index);
+                              final option = options.elementAt(index);
                               return ListTile(
-                                title: Text(option, style: GoogleFonts.montserrat(color: Colors.black)),
+                                title: Text(option,
+                                    style: GoogleFonts.montserrat(
+                                        color: Colors.black)),
                                 onTap: () => onSelected(option),
                               );
                             },
@@ -180,7 +158,26 @@ class _UploadDataPageState extends State<UploadDataPage> {
                     ),
 
                     const SizedBox(height: 12),
-                    _buildInputField(quantityController, 'Quantity'),
+
+                    // Quantity with limit validation
+                    TextFormField(
+                      controller: quantityController,
+                      keyboardType: TextInputType.number,
+                      style: GoogleFonts.montserrat(color: Colors.white),
+                      decoration: _inputDecoration('Quantity in kg (Must be 150-20000kg)'),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter quantity';
+                        }
+                        final num? qty = num.tryParse(value);
+                        if (qty == null) return 'Enter a valid number';
+                        if (qty < 150 || qty > 20000) {
+                          return 'Quantity must be 150–20000 kg';
+                        }
+                        return null;
+                      },
+                    ),
+
                     const SizedBox(height: 12),
 
                     // Arrival Date
@@ -189,7 +186,8 @@ class _UploadDataPageState extends State<UploadDataPage> {
                       child: AbsorbPointer(
                         child: TextFormField(
                           decoration: _inputDecoration("Arrival Date").copyWith(
-                            suffixIcon: const Icon(Icons.calendar_today, color: Colors.white),
+                            suffixIcon:
+                                const Icon(Icons.calendar_today, color: Colors.white),
                           ),
                           controller: TextEditingController(text: formattedDate),
                           style: GoogleFonts.montserrat(color: Colors.white),
@@ -198,6 +196,7 @@ class _UploadDataPageState extends State<UploadDataPage> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 12),
 
                     // Arrival Time
@@ -206,7 +205,8 @@ class _UploadDataPageState extends State<UploadDataPage> {
                       child: AbsorbPointer(
                         child: TextFormField(
                           decoration: _inputDecoration("Arrival Time").copyWith(
-                            suffixIcon: const Icon(Icons.access_time, color: Colors.white),
+                            suffixIcon:
+                                const Icon(Icons.access_time, color: Colors.white),
                           ),
                           controller: TextEditingController(text: formattedTime),
                           style: GoogleFonts.montserrat(color: Colors.white),
@@ -221,14 +221,20 @@ class _UploadDataPageState extends State<UploadDataPage> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFBFBF6E),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                         onPressed: () {
                           if (_formKey.currentState!.validate() &&
-                              selectedVegetable != null &&
-                              selectedVegetable!.isNotEmpty) {
+                              selectedVegetable != null) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => ReviewPage(data: {
+                                builder: (_) => ReviewPage(data: {
                                   'truckId': truckIdController.text,
                                   'vegetable': selectedVegetable!,
                                   'quantity': quantityController.text,
@@ -237,19 +243,12 @@ class _UploadDataPageState extends State<UploadDataPage> {
                                 }),
                               ),
                             );
-                          } else {
+                          } else if (selectedVegetable == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text('Please select a vegetable')),
                             );
                           }
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFBFBF6E),
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
                         child: Text(
                           'Submit',
                           style: GoogleFonts.montserrat(
@@ -270,6 +269,7 @@ class _UploadDataPageState extends State<UploadDataPage> {
     );
   }
 
+  // --- Reusable Input Decoration ---
   Widget _buildInputField(TextEditingController controller, String hint) {
     return TextFormField(
       controller: controller,
@@ -279,17 +279,15 @@ class _UploadDataPageState extends State<UploadDataPage> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint) {
-    return InputDecoration(
-      hintText: hint,
-      hintStyle: GoogleFonts.montserrat(color: Colors.white),
-      filled: true,
-      fillColor: const Color(0xFF4A3B2A),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide.none,
-      ),
-    );
-  }
+  InputDecoration _inputDecoration(String hint) => InputDecoration(
+        hintText: hint,
+        hintStyle: GoogleFonts.montserrat(color: Colors.white),
+        filled: true,
+        fillColor: const Color(0xFF4A3B2A),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      );
 }
