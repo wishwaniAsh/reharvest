@@ -1,7 +1,7 @@
+import 'package:ReHarvest/pages/forgotpassword.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'top_curve_clipper.dart';
 import '../services/auth_service.dart';
 import 'package:ReHarvest/pages/farmholderscreen.dart';
@@ -113,11 +113,16 @@ class _LoginPageState extends State<LoginPage> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: _forgotPassword,
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                          );
+                        },
                         child: Text(
                           'Forgot Password?',
                           style: GoogleFonts.montserrat(
-                            color:  Colors.red,
+                            color: Colors.red,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -169,7 +174,7 @@ class _LoginPageState extends State<LoginPage> {
                             'Register Now',
                             style: GoogleFonts.montserrat(
                               fontWeight: FontWeight.bold,
-                               color:  Colors.red,
+                              color: Colors.red,
                             ),
                           ),
                         )
@@ -279,27 +284,6 @@ class _LoginPageState extends State<LoginPage> {
       } finally {
         setState(() => _isLoading = false);
       }
-    }
-  }
-
-  // Forgot password function
-  void _forgotPassword() async {
-    if (emailController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your email address first')),
-      );
-      return;
-    }
-
-    try {
-      await _authService.sendPasswordResetEmail(emailController.text.trim());
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password reset email sent!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
-      );
     }
   }
 
