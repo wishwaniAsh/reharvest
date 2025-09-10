@@ -35,6 +35,7 @@ flutter:
     - assets/images/signup.png
     - assets/images/login.png 
     - assets/images/predict.png
+    - assets/images/pending.png
 
 flutter_launcher_icons:
   android: true

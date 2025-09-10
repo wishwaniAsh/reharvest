@@ -1,9 +1,11 @@
+import 'package:ReHarvest/pages/login_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'top_curve_clipper.dart';
 import '../services/auth_service.dart';
+import 'package:ReHarvest/pages/farmholderscreen.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -53,32 +55,20 @@ class _SignUpPageState extends State<SignUpPage> {
             ),
           ),
 
-          Positioned(
-            top: 40,
-            left: 10,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.black),
-              onPressed: () {
-                Navigator.pop(context);
-              },
-            ),
-          ),
 
           Align(
             alignment: Alignment.center,
             child: SingleChildScrollView(
-              
               padding: const EdgeInsets.fromLTRB(24, 180, 24, 24),
-              
               child: Form(
                 key: _formKey,
                 child: Column(
                   children: [
                     Image.asset(
-                    'assets/images/signup.png',
-                    height: 200,
-                  ),
-                  const SizedBox(height: 16),
+                      'assets/images/signup.png',
+                      height: 200,
+                    ),
+                    const SizedBox(height: 16),
                     _buildTextField(usernameController, 'User name'),
                     const SizedBox(height: 12),
                     _buildTextField(
@@ -266,24 +256,39 @@ class _SignUpPageState extends State<SignUpPage> {
             const SnackBar(content: Text('Registered successfully!')),
           );
 
-          // Get the role from database to ensure consistency
+          // Get the role and approval status from database
           Map<String, dynamic>? userData = await _authService.getUserData(user.uid);
           String? userRole = userData?['role'] as String?;
+          bool isApproved = userData?['approved'] ?? false;
 
           // Use the role from database, fallback to selectedRole if needed
           final effectiveRole = userRole ?? selectedRole;
 
-          // Navigate based on role
-          if (effectiveRole == 'Admin') {
+          // Navigate based on role and approval status
+          if (effectiveRole == 'Admin' && !isApproved) {
+            // Admin needs approval - go to waiting screen
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              '/waiting',
+              (route) => false,
+            );
+          } else if (effectiveRole == 'Admin' && isApproved) {
+            // Admin is approved - go to admin dashboard
             Navigator.pushNamedAndRemoveUntil(
               context,
               '/admin_dashboard',
               (route) => false,
             );
           } else if (effectiveRole == 'Farm-holder') {
-            Navigator.pushNamedAndRemoveUntil(
+            // Navigate to FarmHolderDashboard with user ID and name
+            Navigator.pushAndRemoveUntil(
               context,
-              '/farmholderscreen',
+              MaterialPageRoute(
+                builder: (context) => FarmHolderDashboard(
+                  farmHolderId: user.uid,
+                  farmHolderName: usernameController.text.trim(),
+                ),
+              ),
               (route) => false,
             );
           } else if (effectiveRole == 'Farmer') {

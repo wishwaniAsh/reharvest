@@ -6,6 +6,10 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final DatabaseReference _database;
 
+  // Hardcoded super admin credentials
+  static const String superAdminEmail = 'superadmin@gmail.com';
+  static const String superAdminPassword = 'superadmin';
+
   AuthService() : _database = FirebaseDatabase.instanceFor(
           app: Firebase.app(),
           databaseURL: 'https://reharvest-efbda-default-rtdb.asia-southeast1.firebasedatabase.app'
@@ -21,6 +25,14 @@ class AuthService {
     try {
       print('Attempting to register user: $email');
       
+      // Check if registering as super admin (should not be allowed)
+      if (email == superAdminEmail) {
+        throw FirebaseAuthException(
+          code: 'invalid-email',
+          message: 'Cannot register with super admin email',
+        );
+      }
+
       // Create user with email and password
       UserCredential result = await _auth.createUserWithEmailAndPassword(
         email: email,
@@ -32,7 +44,7 @@ class AuthService {
       if (user != null) {
         print('User created successfully: ${user.uid}');
         
-        // Save user data to Realtime Database
+        // Save user data to Realtime Database with approval status
         await _saveUserDataToRealtimeDatabase(user.uid, email, username, role);
         
         // Update user profile with display name
@@ -73,12 +85,16 @@ class AuthService {
       print('Path: users/$uid');
       print('Data: {uid: $uid, email: $email, username: $username, role: $role}');
       
+      // Auto-approve non-admin roles, require approval for admins
+      bool isApproved = role != 'Admin';
+      
       // Use set() instead of update() to ensure all data is written
       await _database.child('users').child(uid).set({
         'uid': uid,
         'email': email,
         'username': username,
         'role': role,
+        'approved': isApproved,
         'createdAt': DateTime.now().toIso8601String(),
       });
       
@@ -109,15 +125,41 @@ class AuthService {
     await _auth.signOut();
   }
 
-  // Login with email and password
+  // Login with email and password - UPDATED FOR SUPER ADMIN
   Future<User?> loginWithEmailAndPassword(String email, String password) async {
     try {
-      UserCredential result = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      
-      return result.user;
+      // Handle super admin login
+      if (email == superAdminEmail && password == superAdminPassword) {
+        try {
+          // Try to sign in with Firebase
+          UserCredential result = await _auth.signInWithEmailAndPassword(
+            email: email,
+            password: password,
+          );
+          
+          // Ensure super admin data exists in database
+          await _ensureSuperAdminDataExists(result.user!);
+          
+          return result.user;
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'user-not-found') {
+            // Super admin doesn't exist in auth, create it
+            print('Super admin not found in auth, creating...');
+            return await _createSuperAdminAccount();
+          } else {
+            // Re-throw other auth errors
+            rethrow;
+          }
+        }
+      } else {
+        // Regular user login
+        UserCredential result = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        
+        return result.user;
+      }
     } on FirebaseAuthException catch (e) {
       print('Login Error: ${e.code} - ${e.message}');
       rethrow;
@@ -128,6 +170,57 @@ class AuthService {
         // Even with this error, the user is usually logged in successfully
         return _auth.currentUser;
       }
+      rethrow;
+    }
+  }
+
+  // Create super admin account
+  Future<User?> _createSuperAdminAccount() async {
+    try {
+      // Create super admin user
+      UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: superAdminEmail,
+        password: superAdminPassword,
+      );
+      
+      // Save super admin data to database
+      await _database.child('users').child(result.user!.uid).set({
+        'uid': result.user!.uid,
+        'email': superAdminEmail,
+        'username': 'Super Admin',
+        'role': 'Super Admin',
+        'approved': true,
+        'createdAt': DateTime.now().toIso8601String(),
+      });
+      
+      print('Super admin account created successfully');
+      return result.user;
+    } catch (e) {
+      print('Error creating super admin account: $e');
+      rethrow;
+    }
+  }
+
+  // Ensure super admin data exists in database
+  Future<void> _ensureSuperAdminDataExists(User user) async {
+    try {
+      final snapshot = await _database.child('users').child(user.uid).get();
+      
+      if (!snapshot.exists) {
+        print('Super admin data not found in database, creating it...');
+        // Create super admin data
+        await _database.child('users').child(user.uid).set({
+          'uid': user.uid,
+          'email': user.email,
+          'username': 'Super Admin',
+          'role': 'Super Admin',
+          'approved': true,
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+        print('Super admin data created successfully');
+      }
+    } catch (e) {
+      print('Error ensuring super admin data exists: $e');
       rethrow;
     }
   }
@@ -168,6 +261,17 @@ class AuthService {
     }
   }
 
+  // Check if user is approved
+  Future<bool> isUserApproved(String uid) async {
+    try {
+      final userData = await getUserData(uid);
+      return userData?['approved'] ?? false;
+    } catch (e) {
+      print('Error checking user approval status: $e');
+      return false;
+    }
+  }
+
   // NEW: Check if user exists in database and create default data if missing
   Future<void> ensureUserDataExists(User user, {String defaultRole = 'Farmer'}) async {
     try {
@@ -181,6 +285,7 @@ class AuthService {
           'email': user.email,
           'username': user.displayName ?? user.email!.split('@')[0],
           'role': defaultRole,
+          'approved': defaultRole != 'Admin', // Auto-approve non-admins
           'createdAt': DateTime.now().toIso8601String(),
         });
         print('Default user data created successfully');
@@ -191,25 +296,69 @@ class AuthService {
     }
   }
 
-  // Add this method to your AuthService class
-Future<void> sendPasswordResetEmail(String email) async {
-  try {
-    await _auth.sendPasswordResetEmail(email: email);
-    print('Password reset email sent to $email');
-  } on FirebaseAuthException catch (e) {
-    print('Firebase Auth Error: ${e.code} - ${e.message}');
-    
-    // Handle specific error cases
-    if (e.code == 'user-not-found') {
-      throw Exception('No user found with this email address');
-    } else if (e.code == 'invalid-email') {
-      throw Exception('The email address is not valid');
-    } else {
-      throw Exception('Failed to send password reset email: ${e.message}');
-    }
-  } catch (e) {
-    print('Error sending password reset email: $e');
-    throw Exception('Failed to send password reset email');
+  // Get all users (for super admin)
+  Stream<DatabaseEvent> getAllUsers() {
+    return _database.child('users').onValue;
   }
-}
+
+  // Approve admin user
+  Future<void> approveAdmin(String uid) async {
+    try {
+      await _database.child('users').child(uid).update({
+        'approved': true,
+        'approvedAt': DateTime.now().toIso8601String(),
+      });
+      print('Admin $uid approved successfully');
+    } catch (e) {
+      print('Error approving admin: $e');
+      rethrow;
+    }
+  }
+
+  // Reject admin user (delete from database and auth)
+  Future<void> rejectAdmin(String uid) async {
+    try {
+      // Delete from database
+      await _database.child('users').child(uid).remove();
+      print('Admin $uid rejected and removed from database');
+      
+      // Also delete the auth account if possible
+      // Note: This requires recent authentication, might not always work
+      try {
+        User? userToDelete = _auth.currentUser;
+        if (userToDelete != null && userToDelete.uid == uid) {
+          await userToDelete.delete();
+          print('Admin $uid also deleted from authentication');
+        }
+      } catch (e) {
+        print('Could not delete admin from authentication: $e');
+        // This is expected if we're not the currently logged in user
+      }
+    } catch (e) {
+      print('Error rejecting admin: $e');
+      rethrow;
+    }
+  }
+
+  // Add this method to your AuthService class
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+      print('Password reset email sent to $email');
+    } on FirebaseAuthException catch (e) {
+      print('Firebase Auth Error: ${e.code} - ${e.message}');
+      
+      // Handle specific error cases
+      if (e.code == 'user-not-found') {
+        throw Exception('No user found with this email address');
+      } else if (e.code == 'invalid-email') {
+        throw Exception('The email address is not valid');
+      } else {
+        throw Exception('Failed to send password reset email: ${e.message}');
+      }
+    } catch (e) {
+      print('Error sending password reset email: $e');
+      throw Exception('Failed to send password reset email');
+    }
+  }
 }
